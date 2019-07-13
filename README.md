@@ -1,14 +1,14 @@
 # edonet
-A simple neural network for educational purposes, written in Python 3, using only numpy.
+A minimal neural network for educational purposes, written in Python 3 using only the numpy library for speedy tensor operations.
 
 ## Requirements
 * numpy
 
 ## Usage
-Run `test.py`. For dataset generation and visualisation in `test.py`, you need matplotlib and sklearn.
+To run an example, use `test.py`. For dataset generation and visualisation in `test.py` you will need matplotlib and sklearn.
 
-```
-# Make dataset; the y datasets are one-hot encoded.
+```python
+# Make dataset; the y datasets must be one-hot encoded.
 x_train, x_test, y_train, y_test = make_dataset()
 
 # Make and train model using four dense layers and cross-entropy loss.
