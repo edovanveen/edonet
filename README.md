@@ -5,7 +5,7 @@ A minimal neural network for educational purposes, written in Python 3 using onl
 * numpy
 
 ## Usage
-To run an example, use `test.py`. For dataset generation and visualisation in `test.py` you will need matplotlib and sklearn.
+To run an example, use `test_dense.py`. For dataset generation and visualisation in `test_dense.py` you will need matplotlib and sklearn.
 
 ```python
 # Make dataset; the y datasets must be one-hot encoded.
