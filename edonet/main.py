@@ -17,35 +17,149 @@ class Conv2DLayer:
         return
     
     
-class MaxPoolLayer:
+class MaxPool2DLayer:
 
-    def __init__(self, input_size, pool_size, stride=1):
-        return
+    def __init__(self, input_size, pool_size=(2, 2)):
+        """
+        Initialize a max pooling layer.
+        
+        Parameters
+        ----------
+        input_size : 3-tuple of ints
+            Size of the input, e.g. (256, 256, 3) for a 256 by 256 rgb image.
+        pool_size : 2-tuple of ints
+            Size of the pooling filter. The first two dimensions of the input
+            need to be divisible by the pool size dimensions, respectively.
+        """
+        
+        # Save relevant attributes.
+        self.input_size = input_size
+        self.pool_size = pool_size
+        self.output_size = (self.input_size[0] // self.pool_size[0],
+                            self.input_size[1] // self.pool_size[1],
+                            self.input_size[2])
 
     def forward_prop(self, x):
-        return
+        """
+        Do forward propagation through the layer, saving an argmax mask to cache.
+
+        Parameters
+        ----------
+        x : np.array of floats, shape (number of examples,) + self.input_size
+            Input values.
+
+        Returns
+        -------
+        np.array of floats, shape (number of examples,) + self.output_size
+           Output values.
+        """
+        
+        # Keep track of all the dimensions.
+        nr_examples = x.shape[0]
+        m, n, nr_channels = self.output_size
+        p, q = self.pool_size
+        
+        # Reshape x to a tensor from which we can take the maximum of two axes.
+        x_reshaped = x.reshape(nr_examples, m, p, n, q, nr_channels)
+        
+        # Take maximum but keep dimensions.
+        y = x_reshaped.max(axis=(2, 4), keepdims=True)
+        
+        # Make mask of maximum values. Warning: this only works if maximum values are unique!
+        # Maybe divide by some kind of count? Would that help?
+        self.i_cache = (x_reshaped == y).reshape(x.shape).astype(int)
+        
+        # Reshape y to new dimensions.
+        return y.reshape(nr_examples, m, n, nr_channels)
 
     def back_prop(self, dloss_do):
-        return
+        """
+        Do backward propagation through the layer.
+
+        Parameters
+        ----------
+        dloss_do : np.array of floats, shape (number of examples,) + self.output_size
+            Derivative of loss with respect to output values.
+            
+        Returns
+        -------
+        np.array of floats, shape (number of examples,) + self.input_size
+            Derivative of loss with respect to input values.
+        """
+        
+        # Keep track of all the dimensions.
+        nr_examples = dloss_do.shape[0]
+        a, b, _ = self.input_size
+        m, n, nr_channels = self.output_size
+        p, q = self.pool_size
+        
+        # Expand the derivative to the input shape.
+        dloss_do_reshaped = dloss_do.reshape(nr_examples, m, 1, n, 1, nr_channels)
+        dloss_do_expanded = np.einsum('abcefh,cd,fg->abdegh', dloss_do_reshaped, np.ones((1, q)), np.ones((1, p)))
+        dloss_do_expanded = dloss_do_expanded.reshape(nr_examples, a, b, nr_channels)
+        
+        # Apply the cached mask to the derivative.
+        return np.multiply(dloss_do_expanded, self.i_cache)
     
     
 class FlattenLayer:
 
     def __init__(self, input_size):
-        return
+        """
+        Initialize a flattening layer.
+        
+        Parameters
+        ----------
+        input_size : tuple of ints
+            Size of the input, e.g. (256, 256, 3) for a 256 by 256 rgb image.
+        """
+        
+        # Save relevant attributes.
+        self.input_size = input_size
+        self.nr_flat = np.prod(input_size)
 
     def forward_prop(self, x):
-        return
+        """
+        Do forward propagation through the layer.
+
+        Parameters
+        ----------
+        x : np.array of floats, shape (number of examples,) + self.input_size
+            Input values.
+
+        Returns
+        -------
+        y : np.array of floats, shape (number of examples, self.nr_flat)
+           Output values.
+        """
+        
+        # Flatten x (except for first dimension) using reshape.
+        return np.reshape(x, newshape=(x.shape[0], self.nr_flat), order='C')
 
     def back_prop(self, dloss_do):
-        return
+        """
+        Do backward propagation through the layer.
+
+        Parameters
+        ----------
+        dloss_do : np.array of floats, shape (number of examples, self.nr_flat)
+            Derivative of loss with respect to output values.
+            
+        Returns
+        -------
+        np.array of floats, shape (number of examples,) + self.input_size
+            Derivative of loss with respect to input values.
+        """
+        
+        # Reshape flattened array back to size of input array.
+        return np.reshape(dloss_do, newshape=(dloss_do.shape[0],) + self.input_size, order='C')
     
     
 class DenseLayer:
 
     def __init__(self, nr_inputs, nr_nodes, activation):
         """
-        Initialize a layer in a neural network.
+        Initialize a dense layer.
 
         Parameters
         ----------
@@ -54,7 +168,7 @@ class DenseLayer:
         nr_nodes : int
             Number of nodes.
         activation : str
-            For now, either 'relu', 'tanh' or 'softmax'.
+            Activation function, either 'relu', 'tanh' or 'softmax'.
         """
         
         # Save relevant attributes.
@@ -74,7 +188,7 @@ class DenseLayer:
 
     def forward_prop(self, x):
         """
-        Do forward propagation through the network; save x and z to cache.
+        Do forward propagation through the layer; save x and z to cache.
 
         Parameters
         ----------

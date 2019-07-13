@@ -29,14 +29,13 @@ y_pred = model.predict(x_test)
 ## To do
 
 * Implementation of 2D convolutions;
-* Implementation of max pooling;
-* Implementation of flattening layer;
 * Add more activation and loss functions.
 
 ## Issues
 
 * Inputs should be rescaled properly;
 * Can weight initialization be done better?
+* MaxPool2DLayer: creation of the cached mask goes wrong when multiple elements are equal to max.
 
 ## Authors
 * **Edo van Veen** - *Initial work* - [edovanveen](https://github.com/edovanveen)
