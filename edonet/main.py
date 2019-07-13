@@ -17,6 +17,30 @@ class Conv2DLayer:
         return
     
     
+class MaxPoolLayer:
+
+    def __init__(self, input_size, pool_size, stride=1):
+        return
+
+    def forward_prop(self, x):
+        return
+
+    def back_prop(self, dloss_do):
+        return
+    
+    
+class FlattenLayer:
+
+    def __init__(self, input_size):
+        return
+
+    def forward_prop(self, x):
+        return
+
+    def back_prop(self, dloss_do):
+        return
+    
+    
 class DenseLayer:
 
     def __init__(self, nr_inputs, nr_nodes, activation):
@@ -109,14 +133,16 @@ class NeuralNet:
 
         Parameters
         ----------
-        input_size : int
-            Number of input features.
-        layers : tuple of tuples of (int, str, str)
-            Tuple of tuples encoding (nr of nodes, type of layer, activation function).
-        loss : str
-            Loss function: 'CEL' for cross-entropy loss
-        seed : int
-            Seed for random initialization of weights.
+        input_size : int or tuple of ints
+            Number of input features. Should be an int if the first layer is a dense layer.
+            Should be a tuple of ints if the first layer is a convolution.
+        layers : tuple of dicts
+            Tuple of dicts containing layer properties. Example dict:
+            {'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'}
+        loss : str, optional
+            Loss function. Default: 'CEL' for cross-entropy loss.
+        seed : None or int, optional
+            Seed for random initialization of weights. Default: None.
         """
         
         # Process input.
@@ -133,8 +159,9 @@ class NeuralNet:
         self.layers = [make_layer(layers[0], input_size)]
         layer_indices = np.arange(len(layers))
         for i in layer_indices[1:]:
-            nr_input = layers[i-1]['nr_nodes']
-            self.layers.append(make_layer(layers[i], nr_input))
+            if layers[i-1]['type'] == 'dense':
+                nr_inputs = layers[i-1]['nr_nodes']
+            self.layers.append(make_layer(layers[i], nr_inputs))
 
     def predict(self, x):
         """
@@ -188,10 +215,12 @@ class NeuralNet:
             Input features.
         y_true : np.array of floats, shape (number of examples, number of classes)
             One-hot encoded labels.
-        epochs : int
+        epochs : int, optional
             Number of epochs.
-        learning_rate : float
-            Learning rate of the network.
+        learning_rate : float, optional
+            Learning rate of the network. Default: 0.1.
+        batch_size : int, optional
+            Batch size. Default: 100.
         """
         
         # Calculate number of batches.

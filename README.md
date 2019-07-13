@@ -26,6 +26,17 @@ model.fit(x_train, y_train, epochs=50, learning_rate=0.1, batch_size=10)
 # Do a prediction using the test set.
 y_pred = model.predict(x_test)
 ```
+## To do
+
+* Implementation of 2D convolutions;
+* Implementation of max pooling;
+* Implementation of flattening layer;
+* Add more activation and loss functions.
+
+## Issues
+
+* Inputs should be rescaled properly;
+* Can weight initialization be done better?
 
 ## Authors
 * **Edo van Veen** - *Initial work* - [edovanveen](https://github.com/edovanveen)
