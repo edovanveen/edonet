@@ -8,8 +8,11 @@ import edonet
 # Make and test model.
 def main():
     
-    # Test flatten layer.
-    f = edonet.MaxPool2DLayer((4, 4, 3), pool_size=(2, 2))
+    # Test flatten layer.        
+    np.random.seed(0)
+    f = edonet.Conv2DLayer((4, 4, 3), nr_filters=10, filter_size=(2, 2), stride=(2, 2), activation='relu', padding='same')
+    
+    print(f.padding)
     
     x = np.array([[[1.0, 1.1, 0.0],
                    [1.2, 2.0, 3.0],
@@ -28,12 +31,12 @@ def main():
                    [9, 1, 1],
                    [0, 1, 1]]])
     x = np.array([x])
+    
+    f.init_weights()
     y = f.forward_prop(x)
     
     print(x)
     print(y)
-    print(f.i_cache)
-    print(f.back_prop(y))
     
 
 if __name__ == "__main__":

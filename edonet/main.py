@@ -1,17 +1,74 @@
 import numpy as np
+
 import edonet.functions
 
 
 class Conv2DLayer:
 
-    def __init__(self, input_size, filter_size, activation, stride=1, padding='valid'):
-        return
+    def __init__(self, input_size, nr_filters, filter_size, activation, stride=(1, 1), padding='valid'):
+        """
+        Initialize a 2D convolution layer.
+        
+        Parameters
+        ----------
+        input_size : 3-tuple of ints
+            Size of the input, e.g. (256, 256, 3) for a 256 by 256 rgb image.
+        """
+        
+        self.input_size = input_size
+        self.nr_filters = nr_filters
+        self.filter_size = filter_size
+        self.stride = stride
+        self.ac_func, self.ac_func_d = edonet.functions.activation.choose(activation)
+        if padding == 'same':
+            self.padding = ((0, 0),
+                            (int(np.floor((filter_size[0] - 1) / 2)),
+                             int(np.ceil((filter_size[0] - 1) / 2))),
+                            (int(np.floor((filter_size[1] - 1) / 2)),
+                             int(np.ceil((filter_size[1] - 1) / 2))),
+                            (0,0))
+        elif padding == 'valid':
+            self.padding = ((0, 0), (0, 0), (0, 0) (0, 0))
+        self.padded_size = (self.input_size[0] + self.padding[1][0] + self.padding[1][1],
+                            self.input_size[1] + self.padding[2][0] + self.padding[2][1],
+                            self.input_size[2])
+        self.output_size = (int(np.floor((self.padded_size[0] - self.filter_size[0] + 1) / self.stride[0])),
+                            int(np.floor((self.padded_size[1] - self.filter_size[1] + 1) / self.stride[1])),
+                            self.nr_filters)
             
     def init_weights(self):
-        return
+        
+        
+        # Keep track of dimensions
+        a, b, c, d = self.filter_size + (self.input_size[2], self.nr_filters)
+        
+        # Set weight scaling parameter. Can this be improved?
+        scaling = np.sqrt(2) / np.sqrt(np.prod(self.filter_size) * np.prod(self.input_size))
+        
+        # Initialize weights.
+        self.filters = scaling * (2 * np.random.rand(a, b, c, d) - 1)
+        self.bias = scaling * (2 * np.random.rand(1) - 1)
 
     def forward_prop(self, x):
-        return
+        
+        # Add padding.
+        y = np.pad(x, self.padding, 'constant', constant_values=0)
+        
+        # Keep track of all the dimensions
+        nr_examples, _, _, c = y.shape
+        h, i, j, k = y.strides
+        p, q = self.filter_size
+        n, m, _ = self.output_size
+        sx, sy = self.stride
+        
+        # Create strided submatrices.
+        sub_shape = (nr_examples, p, q, n, m, c)
+        sub_strides = (h, i * sx, j * sy, i * sx, j * sy, k)
+        as_strided = np.lib.stride_tricks.as_strided
+        sub_matrices = as_strided(y, shape=sub_shape, strides=sub_strides)
+        
+        # Get convolution.
+        return np.einsum('hijklm,ijmn->hkln', sub_matrices, self.filters)
 
     def back_prop(self, dloss_do, learning_rate):
         return
@@ -21,7 +78,7 @@ class MaxPool2DLayer:
 
     def __init__(self, input_size, pool_size=(2, 2)):
         """
-        Initialize a max pooling layer.
+        Initialize a 2D max pooling layer.
         
         Parameters
         ----------
@@ -134,7 +191,7 @@ class FlattenLayer:
         """
         
         # Flatten x (except for first dimension) using reshape.
-        return np.reshape(x, newshape=(x.shape[0], self.nr_flat), order='C')
+        return np.reshape(x, newshape=(x.shape[0], self.nr_flat))
 
     def back_prop(self, dloss_do):
         """
@@ -152,7 +209,7 @@ class FlattenLayer:
         """
         
         # Reshape flattened array back to size of input array.
-        return np.reshape(dloss_do, newshape=(dloss_do.shape[0],) + self.input_size, order='C')
+        return np.reshape(dloss_do, newshape=(dloss_do.shape[0],) + self.input_size)
     
     
 class DenseLayer:
