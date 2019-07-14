@@ -13,13 +13,26 @@ class Conv2DLayer:
         ----------
         input_size : 3-tuple of ints
             Size of the input, e.g. (256, 256, 3) for a 256 by 256 rgb image.
+        nr_filters : int
+            Number of convolutional filters.
+        filter_size : 2-tuple of ints
+            Size of the convolutional filters.
+        activation : str
+            Activation function.
+        stride : 2-tuple of ints, optional
+            x and y strides for applying the filters. Default: (1, 1).
+        padding : str, optional
+            Padding - 'valid' or 'same'. Default: 'valid'.
         """
         
+        # Save attributes.
         self.input_size = input_size
         self.nr_filters = nr_filters
         self.filter_size = filter_size
         self.stride = stride
         self.ac_func, self.ac_func_d = edonet.functions.activation.choose(activation)
+        
+        # Take care of padding.
         if padding == 'same':
             self.padding = ((0, 0),
                             (int(np.floor((filter_size[0] - 1) / 2)),
@@ -29,6 +42,8 @@ class Conv2DLayer:
                             (0,0))
         elif padding == 'valid':
             self.padding = ((0, 0), (0, 0), (0, 0) (0, 0))
+            
+        # Calculate output size.
         self.padded_size = (self.input_size[0] + self.padding[1][0] + self.padding[1][1],
                             self.input_size[1] + self.padding[2][0] + self.padding[2][1],
                             self.input_size[2])
@@ -37,7 +52,9 @@ class Conv2DLayer:
                             self.nr_filters)
             
     def init_weights(self):
-        
+        """
+        Initialize the filter weights.
+        """
         
         # Keep track of dimensions
         a, b, c, d = self.filter_size + (self.input_size[2], self.nr_filters)
@@ -50,6 +67,19 @@ class Conv2DLayer:
         self.bias = scaling * (2 * np.random.rand(1) - 1)
 
     def forward_prop(self, x):
+        """
+        Forward propagation.
+        
+        Parameters
+        ----------
+        x : np.array of floats, shape (nr_examples,) + self.input_size
+            Inputs.
+            
+        Returns
+        -------
+        np.array of floats, shape (nr_examples,) + self.output_size
+            Outputs.
+        """
         
         # Add padding.
         y = np.pad(x, self.padding, 'constant', constant_values=0)
@@ -71,7 +101,33 @@ class Conv2DLayer:
         return np.einsum('hijklm,ijmn->hkln', sub_matrices, self.filters)
 
     def back_prop(self, dloss_do, learning_rate):
-        return
+        """
+        Do backpropagation and update weights.
+        
+        Parameters
+        ----------
+        dloss_do : np.array of floats, shape (nr_examples,) + self.output_size
+            Derivative of the loss with respect to output values.
+        learning_rate : float
+            Learning rate.
+            
+        Returns
+        -------
+        np.array of floats, shape (nr_examples,) + self.input_size
+            Outputs.
+        """
+        
+        # Calculate derivatives.
+        dloss_dz = np.einsum(?, dloss_do, self.ac_func_d(self.z_cache))
+        dloss_dw = 
+        dloss_dx = 
+        
+        # Update weights.
+        w_update = np.average(dloss_dw, axis=0)
+        self.weights = self.weights - learning_rate * w_update
+        
+        # Return derivative of loss with respect to inputs x
+        return dloss_dx
     
     
 class MaxPool2DLayer:
