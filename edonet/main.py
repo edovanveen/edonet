@@ -41,16 +41,37 @@ class Conv2DLayer:
                              int(np.ceil((filter_size[1] - 1) / 2))),
                             (0,0))
         elif padding == 'valid':
-            self.padding = ((0, 0), (0, 0), (0, 0) (0, 0))
-            
-        # Calculate output size.
-        self.padded_size = (self.input_size[0] + self.padding[1][0] + self.padding[1][1],
-                            self.input_size[1] + self.padding[2][0] + self.padding[2][1],
+            self.padding = ((0, 0), (0, 0), (0, 0), (0, 0))
+        self.padded_size = (self.input_size[0] + np.sum(self.padding[1]),
+                            self.input_size[1] + np.sum(self.padding[2]),
                             self.input_size[2])
-        self.output_size = (int(np.floor((self.padded_size[0] - self.filter_size[0] + 1) / self.stride[0])),
-                            int(np.floor((self.padded_size[1] - self.filter_size[1] + 1) / self.stride[1])),
+        
+        # Keep track of dimensions.
+        a, b, c = self.padded_size
+        p, q = self.filter_size
+        sx, sy = self.stride
+        self.output_size = ((a - p) // sx + 1,
+                            (b - q) // sy + 1,
                             self.nr_filters)
-            
+        m, n, _ = self.output_size
+        
+        # Create kronecker delta matrices.
+        self.d_x = np.zeros((a, m, p), dtype=int)
+        for ia in range(a):
+            for ii in range(m):
+                for ip in range(p):
+                    if sx * ii + ip == ia:
+                        self.d_x[ia, ii, ip] = 1
+        self.d_y = np.zeros((b, b - q + 1, q), dtype=int)
+        for ib in range(b):
+            for ij in range(n):
+                for iq in range(q):
+                    if sy * ij + iq == ib:
+                        self.d_y[ib, ij, iq] = 1
+                        
+        # Create intial filter weights.
+        self.init_weights()
+        
     def init_weights(self):
         """
         Initialize the filter weights.
@@ -60,11 +81,11 @@ class Conv2DLayer:
         a, b, c, d = self.filter_size + (self.input_size[2], self.nr_filters)
         
         # Set weight scaling parameter. Can this be improved?
-        scaling = np.sqrt(2) / np.sqrt(np.prod(self.filter_size) * np.prod(self.input_size))
+        scaling = np.sqrt(2) / np.sqrt(a * b * c * d)
         
         # Initialize weights.
         self.filters = scaling * (2 * np.random.rand(a, b, c, d) - 1)
-        self.bias = scaling * (2 * np.random.rand(1) - 1)
+        self.bias = scaling * (2 * np.random.rand(1, 1, 1, d) - 1)
 
     def forward_prop(self, x):
         """
@@ -77,28 +98,20 @@ class Conv2DLayer:
             
         Returns
         -------
-        np.array of floats, shape (nr_examples,) + self.output_size
+        np.array of floats, shape (nr_examples, ?, ?, self.nr_filters)
             Outputs.
         """
         
         # Add padding.
         y = np.pad(x, self.padding, 'constant', constant_values=0)
         
-        # Keep track of all the dimensions
-        nr_examples, _, _, c = y.shape
-        h, i, j, k = y.strides
-        p, q = self.filter_size
-        n, m, _ = self.output_size
+        # Create x_cache submatrices using self.d_x and self.d_y.
         sx, sy = self.stride
-        
-        # Create strided submatrices.
-        sub_shape = (nr_examples, p, q, n, m, c)
-        sub_strides = (h, i * sx, j * sy, i * sx, j * sy, k)
-        as_strided = np.lib.stride_tricks.as_strided
-        sub_matrices = as_strided(y, shape=sub_shape, strides=sub_strides)
-        
+        self.x_cache = np.einsum('adfh,deb,fgc->abcegh', y, self.d_x, self.d_y)
+
         # Get convolution.
-        return np.einsum('hijklm,ijmn->hkln', sub_matrices, self.filters)
+        self.z_cache = np.einsum('hijklm,ijmn->hkln', self.x_cache, self.filters) + self.bias
+        return self.z_cache
 
     def back_prop(self, dloss_do, learning_rate):
         """
@@ -118,13 +131,16 @@ class Conv2DLayer:
         """
         
         # Calculate derivatives.
-        dloss_dz = np.einsum(?, dloss_do, self.ac_func_d(self.z_cache))
-        dloss_dw = 
-        dloss_dx = 
+        dloss_dz = np.einsum('abcd,abcd->abcd', dloss_do, self.ac_func_d(self.z_cache))
+        dloss_dw = np.einsum('aefh,abcefg->abcgh', dloss_dz, self.x_cache)
+        dz_dx = np.einsum('efgh,abe,cdf->abcdgh', self.filters, self.d_x, self.d_y)
+        dloss_dx = np.einsum('adeg,bdcefg->abcf', dloss_dz, dz_dx)
         
         # Update weights.
         w_update = np.average(dloss_dw, axis=0)
-        self.weights = self.weights - learning_rate * w_update
+        b_update = np.average(dloss_dz, axis=(0, 1, 2))
+        self.filters = self.filters - learning_rate * w_update
+        self.bias = self.bias - learning_rate * b_update
         
         # Return derivative of loss with respect to inputs x
         return dloss_dx
@@ -185,7 +201,7 @@ class MaxPool2DLayer:
         # Reshape y to new dimensions.
         return y.reshape(nr_examples, m, n, nr_channels)
 
-    def back_prop(self, dloss_do):
+    def back_prop(self, dloss_do, learning_rate):
         """
         Do backward propagation through the layer.
 
@@ -229,6 +245,7 @@ class FlattenLayer:
         
         # Save relevant attributes.
         self.input_size = input_size
+        self.output_size = np.prod(input_size)
         self.nr_flat = np.prod(input_size)
 
     def forward_prop(self, x):
@@ -249,7 +266,7 @@ class FlattenLayer:
         # Flatten x (except for first dimension) using reshape.
         return np.reshape(x, newshape=(x.shape[0], self.nr_flat))
 
-    def back_prop(self, dloss_do):
+    def back_prop(self, dloss_do, learning_rate):
         """
         Do backward propagation through the layer.
 
@@ -286,7 +303,7 @@ class DenseLayer:
         
         # Save relevant attributes.
         self.nr_inputs = nr_inputs
-        self.nr_nodes = nr_nodes
+        self.output_size = nr_nodes
         self.z_cache = np.zeros((nr_nodes, 1))
         self.ac_func, self.ac_func_d = edonet.functions.activation.choose(activation)
         self.init_weights()
@@ -296,7 +313,7 @@ class DenseLayer:
         
         # Can we optimize this initialization further?
         scaling = np.sqrt(2) / np.sqrt(self.nr_inputs)
-        self.weights = scaling * (2 * np.random.rand(self.nr_inputs, self.nr_nodes) - 1)
+        self.weights = scaling * (2 * np.random.rand(self.nr_inputs, self.output_size) - 1)
         self.bias = scaling * (2 * np.random.rand(1) - 1)
 
     def forward_prop(self, x):
@@ -341,12 +358,14 @@ class DenseLayer:
         
         # Calculate derivatives.
         dloss_dz = np.einsum('ab,abc->ac', dloss_do, self.ac_func_d(self.z_cache))
-        dloss_dw = np.einsum('ad,ab,cd->abc', dloss_dz, self.x_cache, np.eye(self.nr_nodes))
+        dloss_dw = np.einsum('ad,ab,cd->abc', dloss_dz, self.x_cache, np.eye(self.output_size))
         dloss_dx = np.einsum('ac,bc->ab', dloss_dz, self.weights)
         
         # Update weights.
         w_update = np.average(dloss_dw, axis=0)
+        b_update = np.average(dloss_dw)
         self.weights = self.weights - learning_rate * w_update
+        self.bias = self.bias - learning_rate * b_update
         
         # Return derivative of loss with respect to inputs x
         return dloss_dx
@@ -379,6 +398,13 @@ class NeuralNet:
         
         # Helper function for layer creation.
         def make_layer(layer, inputs):
+            if layer['type'] == 'conv2D':
+                return Conv2DLayer(inputs, layer['nr_filters'], layer['filter_size'], 
+                                   layer['activation'], layer['stride'], layer['padding'])
+            if layer['type'] == 'maxpool':
+                return MaxPool2DLayer(inputs, layer['pool_size'])
+            if layer['type'] == 'flatten':
+                return FlattenLayer(inputs)
             if layer['type'] == 'dense':
                 return DenseLayer(inputs, layer['nr_nodes'], layer['activation'])
             
@@ -386,9 +412,7 @@ class NeuralNet:
         self.layers = [make_layer(layers[0], input_size)]
         layer_indices = np.arange(len(layers))
         for i in layer_indices[1:]:
-            if layers[i-1]['type'] == 'dense':
-                nr_inputs = layers[i-1]['nr_nodes']
-            self.layers.append(make_layer(layers[i], nr_inputs))
+            self.layers.append(make_layer(layers[i], self.layers[i-1].output_size))
 
     def predict(self, x):
         """

@@ -14,6 +14,7 @@ def make_dataset():
     y = np.array([encoder[i] for i in y])
     return train_test_split(x, y, random_state=0)
 
+
 # Check accuracy.
 def accuracy(y_true, y_pred):
     labels_true = y_true.argmax(axis=1)
@@ -56,16 +57,13 @@ def main():
     
     # Make and train model.
     model = edonet.NeuralNet(input_size=2,
-                             layers=(# {'type': 'conv2D', 'nr_filters': 32, 'size': (3, 3), 'activation': 'relu'},
-                                     # {'type': 'maxpool', 'size': (2, 2)},
-                                     # {'type': 'flatten'},
-                                     {'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
+                             layers=({'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
                                      {'type': 'dense', 'nr_nodes': 16, 'activation': 'tanh'},
                                      {'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
                                      {'type': 'dense', 'nr_nodes': 2, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
-    model.fit(x_train, y_train, epochs=50, learning_rate=0.1, batch_size=10)
+    model.fit(x_train, y_train, epochs=100, learning_rate=0.1, batch_size=10)
 
     # Show result on test set.
     print("accuracy: ", accuracy(y_test, model.predict(x_test)))

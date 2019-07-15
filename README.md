@@ -33,6 +33,7 @@ y_pred = model.predict(x_test)
 
 ## Issues
 
+* Add derivative dloss/db for dense layer;
 * Inputs should be rescaled properly;
 * Can weight initialization be done better?
 * MaxPool2DLayer: creation of the cached mask goes wrong when multiple elements are equal to max.
