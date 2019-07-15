@@ -28,14 +28,14 @@ y_pred = model.predict(x_test)
 ```
 ## To do
 
-* Implementation of 2D convolutions;
+* Double check all backprop tensor equations;
+* Figure out correct weight initialization to prevent diminishing/exploding gradients;
 * Add more activation and loss functions.
 
 ## Issues
 
-* Add derivative dloss/db for dense layer;
+* CEL loss vectorization goes wrong for certain values of y_pred;
 * Inputs should be rescaled properly;
-* Can weight initialization be done better?
 * MaxPool2DLayer: creation of the cached mask goes wrong when multiple elements are equal to max.
 
 ## Authors

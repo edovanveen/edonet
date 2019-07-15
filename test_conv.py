@@ -37,11 +37,11 @@ def main():
                                       'activation': 'relu', 'stride': (1, 1), 'padding': 'valid'},
                                      {'type': 'maxpool', 'pool_size': (2, 2)},
                                      {'type': 'flatten'},
-                                     {'type': 'dense', 'nr_nodes': 40, 'activation': 'relu'},
+                                     {'type': 'dense', 'nr_nodes': 32, 'activation': 'relu'},
                                      {'type': 'dense', 'nr_nodes': 10, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
-    model.fit(x_train, y_train, epochs=30, learning_rate=0.01, batch_size=10)
+    model.fit(x_train, y_train, epochs=30, learning_rate=0.005, batch_size=10)
 
     # Show result on test set.
     print(y_test.argmax(axis=1), model.predict(x_test).argmax(axis=1))

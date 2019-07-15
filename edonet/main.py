@@ -98,7 +98,7 @@ class Conv2DLayer:
             
         Returns
         -------
-        np.array of floats, shape (nr_examples, ?, ?, self.nr_filters)
+        np.array of floats, shape (nr_examples,) + self.output_size
             Outputs.
         """
         
@@ -126,7 +126,7 @@ class Conv2DLayer:
             
         Returns
         -------
-        np.array of floats, shape (nr_examples,) + self.input_size
+        dloss_dx : np.array of floats, shape (nr_examples,) + self.input_size
             Outputs.
         """
         
