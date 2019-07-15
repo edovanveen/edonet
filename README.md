@@ -28,8 +28,12 @@ y_pred = model.predict(x_test)
 ```
 ## To do
 
+* np.einsum() is beautiful but slow. Use np.tensordot() and np.dot() instead, for parallelization;
 * Double check all backprop tensor equations;
+* Test multiple conv layers;
 * Figure out correct weight initialization to prevent diminishing/exploding gradients;
+* Rethink NeuralNet layers argument, dict currently a bit clunky;
+* Add NeuralNet.save() and NeuralNet.load() functionalities;
 * Add more activation and loss functions.
 
 ## Issues

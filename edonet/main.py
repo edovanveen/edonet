@@ -74,7 +74,7 @@ class Conv2DLayer:
         
     def init_weights(self):
         """
-        Initialize the filter weights.
+        Initialize the filter weights. The scaling factor can probably be improved upon.
         """
         
         # Keep track of dimensions

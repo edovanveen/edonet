@@ -82,8 +82,7 @@ def tanh_d(z):
     elif len(z.shape) == 4:
         return 1 - np.square(np.tanh(z))
 
-import warnings
-warnings.filterwarnings("error")
+
 def softmax(z):
     """
     Perform softmax activation function, only for 1D layers.
@@ -99,12 +98,7 @@ def softmax(z):
        Output values.
     """
     
-    try:
-        expz = np.subtract(np.exp(z), np.amax(z, axis=1, keepdims=True))
-    except:
-        print("Exploding exponent:")
-        print(z)
-        
+    expz = np.subtract(np.exp(z), np.amax(z, axis=1, keepdims=True))
     return np.divide(expz, np.sum(expz, axis=1, keepdims=True))
 
 

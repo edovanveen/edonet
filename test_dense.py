@@ -20,7 +20,7 @@ def accuracy(y_true, y_pred):
     labels_true = y_true.argmax(axis=1)
     labels_pred = y_pred.argmax(axis=1)
     n_good = np.sum(labels_true - labels_pred == 0)
-    print(n_good / len(y_true))
+    return n_good / len(y_true)
     
     
 # Make grid.

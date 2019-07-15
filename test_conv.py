@@ -14,7 +14,7 @@ def make_dataset():
     encoder = np.eye(10, dtype=int)
     y_train = np.array([encoder[i] for i in y_train])
     y_test = np.array([encoder[i] for i in y_test])
-    return x_train[::500], x_test[::500], y_train[::500], y_test[::500]
+    return x_train[::200], x_test[::200], y_train[::200], y_test[::200]
 
 
 # Check accuracy.
@@ -33,15 +33,16 @@ def main():
     
     # Make and train model.
     model = edonet.NeuralNet(input_size=(28, 28, 1),
-                             layers=({'type': 'conv2D', 'nr_filters': 16, 'filter_size': (5, 5), 
+                             layers=({'type': 'conv2D', 'nr_filters': 16, 'filter_size': (3, 3), 
                                       'activation': 'relu', 'stride': (1, 1), 'padding': 'valid'},
                                      {'type': 'maxpool', 'pool_size': (2, 2)},
                                      {'type': 'flatten'},
-                                     {'type': 'dense', 'nr_nodes': 32, 'activation': 'relu'},
+                                     {'type': 'dense', 'nr_nodes': 20, 'activation': 'relu'},
+                                     {'type': 'dense', 'nr_nodes': 20, 'activation': 'tanh'},
                                      {'type': 'dense', 'nr_nodes': 10, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
-    model.fit(x_train, y_train, epochs=30, learning_rate=0.005, batch_size=10)
+    model.fit(x_train, y_train, epochs=20, learning_rate=0.01, batch_size=10)
 
     # Show result on test set.
     print(y_test.argmax(axis=1), model.predict(x_test).argmax(axis=1))
