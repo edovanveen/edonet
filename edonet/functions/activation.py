@@ -18,28 +18,25 @@ def relu(z):
     return np.maximum(z, 0)
 
 
-def relu_d(z):
+def relu_d(z, dloss_dy):
     """
-    Derivatives with respect to inputs of relu function.
+    Calculate derivatives with respect to inputs of relu function.
     
     Parameters
     ----------
     z : np.array of floats, shape (number of examples,) + (layer shape)
         z-cache.
+    dloss_dy : np.array of floats, shape (number of examples,) + (layer shape)
+        Derivatives of loss with respect to outputs of relu function.
     
     Returns
     -------
-    np.array of floats, shape (number of examples,) + 2 * (layer shape)
-        Derivatives per example.
+    np.array of floats, shape (number of examples,) + (layer shape)
+        Derivatives of loss with respect to inputs of relu function.
     """
     
-    # 1D case.
-    if len(z.shape) == 2:
-        return np.einsum('ab,bc->abc', np.array(z > 0, dtype=int), np.eye(z.shape[1]))
-    
-    # 2D + channels case.
-    elif len(z.shape) == 4:
-        return np.array(z > 0, dtype=int)
+    dy_dz = np.array(z > 0, dtype=int)
+    return np.multiply(dloss_dy, dy_dz)
 
 
 def tanh(z):
@@ -59,7 +56,7 @@ def tanh(z):
     return np.tanh(z)
 
 
-def tanh_d(z):
+def tanh_d(z, dloss_dy):
     """
     Derivatives with respect to inputs of tanh function.
     
@@ -67,20 +64,17 @@ def tanh_d(z):
     ----------
     z : np.array of floats, shape (number of examples,) + (layer shape)
         z-cache.
+    dloss_dy : np.array of floats, shape (number of examples,) + (layer shape)
+        Derivatives of loss with respect to outputs of tanh function.
     
     Returns
     -------
     np.array of floats, shape (number of examples,) + 2 * (layer shape)
-        Derivatives per example.
+        Derivatives of loss with respect to inputs of tanh function.
     """
     
-    # 1D case.
-    if len(z.shape) == 2:
-        return np.einsum('ab,bc->abc', 1 - np.square(np.tanh(z)), np.eye(z.shape[1]))
-    
-    # 2D + channels case.
-    elif len(z.shape) == 4:
-        return 1 - np.square(np.tanh(z))
+    dy_dz = 1 - np.square(np.tanh(z))
+    return np.multiply(dloss_dy, dy_dz)
 
 
 def softmax(z):
@@ -102,7 +96,7 @@ def softmax(z):
     return np.divide(expz, np.sum(expz, axis=1, keepdims=True))
 
 
-def softmax_d(z):
+def softmax_d(z, dloss_dy):
     """
     Derivatives with respect to inputs of softmax function, only for 1D layers.
     
@@ -110,14 +104,28 @@ def softmax_d(z):
     ----------
     z : np.array of floats, shape (number of examples, number of nodes)
         z-cache.
+    dloss_dy : np.array of floats, shape (number of examples, number of nodes)
+        Derivatives of loss with respect to outputs of relu function.
     
     Returns
     -------
-    np.array of floats, shape (number of examples, number of nodes, number of nodes)
-        Derivatives per example.
+    dloss_dz : np.array of floats, shape (number of examples, number of nodes, number of nodes)
+        Derivatives of loss with respect to inputs of softmax function.
     """
+    
+    # Prepare.
     y = softmax(z)
-    return -1. * np.einsum('ab,ac->abc', y, y) + np.einsum('ab,bc->abc', y, np.eye(z.shape[1]))
+    eye = np.eye(y.shape[1])
+    dloss_dz = np.zeros(y.shape)
+    
+    # Iterate over training examples.
+    for n in range(y.shape[0]):
+        y_tdot_y = -1 * np.tensordot(y[n], y[n], axes=0)
+        y_d_kron = np.multiply(y[n].reshape(y.shape[1], 1), eye)
+        dy_dz = np.add(y_tdot_y, y_d_kron)
+        dloss_dz[n] = np.tensordot(dloss_dy[n], dy_dz, axes=1)
+        
+    return dloss_dz
 
 
 def choose(activation):

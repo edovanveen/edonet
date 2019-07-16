@@ -62,7 +62,7 @@ class Conv2DLayer:
                 for ip in range(p):
                     if sx * ii + ip == ia:
                         self.d_x[ia, ii, ip] = 1
-        self.d_y = np.zeros((b, b - q + 1, q), dtype=int)
+        self.d_y = np.zeros((b, n, q), dtype=int)
         for ib in range(b):
             for ij in range(n):
                 for iq in range(q):
@@ -105,21 +105,41 @@ class Conv2DLayer:
         # Add padding.
         y = np.pad(x, self.padding, 'constant', constant_values=0)
         
-        # Create x_cache submatrices using self.d_x and self.d_y.
-        sx, sy = self.stride
-        self.x_cache = np.einsum('adfh,deb,fgc->abcegh', y, self.d_x, self.d_y)
+        # Create x_cache submatrices using np.einsum().
+        # This is about 100 times slower than np.tensordot for z_cache.shape = (50, 26, 26, 16)
+        # It looks really nice though.
+        # sx, sy = self.stride
+        # self.x_cache = np.einsum('adfh,deb,fgc->abcegh', y, self.d_x, self.d_y)
+        # self.z_cache = np.einsum('hijklm,ijmn->hkln', self.x_cache, self.filters) + self.bias
+    
+        # Keep track of dimensions.
+        nr_examples, _, _, k = x.shape
+        m, n, c = self.output_size
+        p, q = self.filter_size
+        
+        # Create x_cache and z_cache.
+        self.x_cache = np.zeros((nr_examples, k, m, p, n, q))
+        self.z_cache = np.zeros((nr_examples, m, n, c))
+        for n in range(nr_examples):
+            y_times_d_x = np.tensordot(y[n], self.d_x, axes=((0,), (0,)))
+            self.x_cache[n] = np.tensordot(y_times_d_x, self.d_y, axes=((0,), (0,)))
+            self.z_cache[n] = np.tensordot(self.x_cache[n], self.filters, 
+                                           axes=((0, 2, 4), (2, 0, 1))) + self.bias
+            
+        # This is a bit of a hack. See if we can flip some tensordot orders to fix this.
+        self.x_cache = self.x_cache.swapaxes(1, 3)
+        self.x_cache = self.x_cache.swapaxes(2, 5)
+        self.x_cache = self.x_cache.swapaxes(3, 5)
+                
+        return self.ac_func(self.z_cache)
 
-        # Get convolution.
-        self.z_cache = np.einsum('hijklm,ijmn->hkln', self.x_cache, self.filters) + self.bias
-        return self.z_cache
-
-    def back_prop(self, dloss_do, learning_rate):
+    def back_prop(self, dloss_dy, learning_rate):
         """
         Do backpropagation and update weights.
         
         Parameters
         ----------
-        dloss_do : np.array of floats, shape (nr_examples,) + self.output_size
+        dloss_dy : np.array of floats, shape (nr_examples,) + self.output_size
             Derivative of the loss with respect to output values.
         learning_rate : float
             Learning rate.
@@ -130,10 +150,22 @@ class Conv2DLayer:
             Outputs.
         """
         
+        nr_examples = dloss_dy.shape[0]
+        
         # Calculate derivatives.
-        dloss_dz = np.einsum('abcd,abcd->abcd', dloss_do, self.ac_func_d(self.z_cache))
+        dloss_dz = self.ac_func_d(self.z_cache, dloss_dy)
+        filters_times_d_y = np.tensordot(self.d_y, self.filters, axes=((2,), (1,)))
+        dz_dx = np.tensordot(self.d_x, filters_times_d_y, axes=((2,), (2,)))
+        # dloss_dw = np.zeros((nr_examples,) + self.filters.shape)
+        # dloss_dx = np.zeros((nr_examples,) + self.input_size)
+        # for n in range(nr_examples):
+        #     dloss_dw[n] = np.tensordot(self.x_cache[n], dloss_dz[n], axes=((2, 3), (0, 1)))
+        #     dloss_dx[n] = np.tensordot(dloss_dz[n], dz_dx, axes=((0, 1, 2), (1, 3, 5)))
+        
+        # Old version: use np.einsum().
+        # Seems faster! Weird!
         dloss_dw = np.einsum('aefh,abcefg->abcgh', dloss_dz, self.x_cache)
-        dz_dx = np.einsum('efgh,abe,cdf->abcdgh', self.filters, self.d_x, self.d_y)
+        # dz_dx = np.einsum('efgh,abe,cdf->abcdgh', self.filters, self.d_x, self.d_y)
         dloss_dx = np.einsum('adeg,bdcefg->abcf', dloss_dz, dz_dx)
         
         # Update weights.
@@ -201,13 +233,13 @@ class MaxPool2DLayer:
         # Reshape y to new dimensions.
         return y.reshape(nr_examples, m, n, nr_channels)
 
-    def back_prop(self, dloss_do, learning_rate):
+    def back_prop(self, dloss_dy, learning_rate):
         """
         Do backward propagation through the layer.
 
         Parameters
         ----------
-        dloss_do : np.array of floats, shape (number of examples,) + self.output_size
+        dloss_dy : np.array of floats, shape (number of examples,) + self.output_size
             Derivative of loss with respect to output values.
             
         Returns
@@ -217,18 +249,18 @@ class MaxPool2DLayer:
         """
         
         # Keep track of all the dimensions.
-        nr_examples = dloss_do.shape[0]
+        nr_examples = dloss_dy.shape[0]
         a, b, _ = self.input_size
         m, n, nr_channels = self.output_size
         p, q = self.pool_size
         
         # Expand the derivative to the input shape.
-        dloss_do_reshaped = dloss_do.reshape(nr_examples, m, 1, n, 1, nr_channels)
-        dloss_do_expanded = np.einsum('abcefh,cd,fg->abdegh', dloss_do_reshaped, np.ones((1, q)), np.ones((1, p)))
-        dloss_do_expanded = dloss_do_expanded.reshape(nr_examples, a, b, nr_channels)
+        dloss_dy_reshaped = dloss_dy.reshape(nr_examples, m, 1, n, 1, nr_channels)
+        dloss_dy_expanded = np.einsum('abcefh,cd,fg->abdegh', dloss_dy_reshaped, np.ones((1, q)), np.ones((1, p)))
+        dloss_dy_expanded = dloss_dy_expanded.reshape(nr_examples, a, b, nr_channels)
         
         # Apply the cached mask to the derivative.
-        return np.multiply(dloss_do_expanded, self.i_cache)
+        return np.multiply(dloss_dy_expanded, self.i_cache)
     
     
 class FlattenLayer:
@@ -339,13 +371,13 @@ class DenseLayer:
         y = self.ac_func(self.z_cache)
         return y
 
-    def back_prop(self, dloss_do, learning_rate):
+    def back_prop(self, dloss_dy, learning_rate):
         """
         Do backward propagation through the network and update the weights accordingly.
 
         Parameters
         ----------
-        dloss_do : np.array of floats, shape (number of examples, number of nodes)
+        dloss_dy : np.array of floats, shape (number of examples, number of nodes)
             Derivative of loss with respect to output values.
         learning_rate : float
             Learning rate for updating weights.
@@ -356,10 +388,20 @@ class DenseLayer:
             Derivative of loss with respect to input values.
         """
         
+        nr_examples = dloss_dy.shape[0]
+        
         # Calculate derivatives.
-        dloss_dz = np.einsum('ab,abc->ac', dloss_do, self.ac_func_d(self.z_cache))
-        dloss_dw = np.einsum('ad,ab,cd->abc', dloss_dz, self.x_cache, np.eye(self.output_size))
-        dloss_dx = np.einsum('ac,bc->ab', dloss_dz, self.weights)
+        dloss_dz = self.ac_func_d(self.z_cache, dloss_dy)
+        dloss_dw = np.zeros((nr_examples,) + self.weights.shape)
+        dloss_dx = np.zeros((nr_examples, self.nr_inputs))
+        for n in range(nr_examples):
+            dloss_dw[n] = np.tensordot(self.x_cache[n], dloss_dz[n], axes=0)
+            dloss_dx[n] = np.tensordot(self.weights, dloss_dz[n], axes=1)
+        
+        # Calculate derivatives using np.einsum().
+        # This is actually faster for small layers? Do more testing!
+        # dloss_dw = np.einsum('ac,ab->abc', dloss_dz, self.x_cache)
+        # dloss_dx = np.einsum('ac,bc->ab', dloss_dz, self.weights)
         
         # Update weights.
         w_update = np.average(dloss_dw, axis=0)
