@@ -42,7 +42,7 @@ def main():
                                      {'type': 'dense', 'nr_nodes': 10, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
-    model.fit(x_train, y_train, epochs=50, learning_rate=0.01, batch_size=10)
+    model.fit(x_train, y_train, epochs=100, learning_rate=0.01, batch_size=10)
 
     # Show result on test set.
     print(y_test.argmax(axis=1), model.predict(x_test).argmax(axis=1))
