@@ -28,10 +28,10 @@ y_pred = model.predict(x_test)
 ```
 ## To do
 
-* np.einsum() is beautiful but slow. Use np.tensordot() and np.dot() instead, for parallelization;
-* Double check all backprop tensor equations;
-* Test multiple conv layers;
-* Figure out correct weight initialization to prevent diminishing/exploding gradients;
+* Figure out correct weight initialization to prevent diminishing/exploding gradients 
+  ([link1](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf), [link2](https://arxiv.org/pdf/1502.01852.pdf));
+* Double check all backprop tensor equations, do 
+  [gradient checking](http://cs231n.github.io/neural-networks-3/?source=post_page---------------------------#gradcheck);
 * Rethink NeuralNet layers argument, dict currently a bit clunky;
 * Add NeuralNet.save() and NeuralNet.load() functionalities;
 * Add more activation and loss functions.
