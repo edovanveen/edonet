@@ -41,7 +41,7 @@ def main():
                                      {'type': 'dense', 'nr_nodes': 10, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
-    model.fit(x_train, y_train, epochs=50, learning_rate=0.01, batch_size=100)
+    model.fit(x_train, y_train, epochs=70, learning_rate=0.01, batch_size=50)
 
     # Show result on test set.
     print("test labels:")
