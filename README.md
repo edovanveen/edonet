@@ -38,7 +38,6 @@ y_pred = model.predict(x_test)
 
 ## Issues
 
-* CEL loss vectorization goes wrong for certain values of y_pred;
 * Inputs should be rescaled properly;
 * MaxPool2DLayer: creation of the cached mask goes wrong when multiple elements are equal to max.
 
