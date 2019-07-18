@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 
 
 def cel(y_pred, y_true):
@@ -18,20 +19,8 @@ def cel(y_pred, y_true):
        Loss values per example.
     """
     
-    m, n = y_true.shape
-    loss = np.zeros(m)
-    for i in range(m):
-        for j in range(n):
-            y0 = y_true[i, j]
-            y1 = y_pred[i, j]
-            if y0 > 0:
-                if y1 > 0.0001:
-                    loss[i] = loss[i] - y0 * np.log(y1)
-                else:
-                    loss[i] = loss[i] + 10
-    return loss
-    # The following gives errors when y_pred is too close to zero:
-    # return -1. * np.sum(np.multiply(y_true, np.log(y_pred)), axis=1)
+    epsilon = 1e-15
+    return -1. * np.sum(np.multiply(y_true, np.log(np.maximum(y_pred, epsilon))), axis=1)
 
 
 def cel_d(y_pred, y_true):
@@ -72,6 +61,11 @@ def choose(loss):
     """
         
     if loss == 'CEL':
+        loss_func = cel
+        loss_func_d = cel_d
+    else:
+        warnings.warn("Warning: loss function '" + str(loss) +
+                      "' not recognized, using cross-entropy loss.")
         loss_func = cel
         loss_func_d = cel_d
             

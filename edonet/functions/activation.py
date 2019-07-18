@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 
 
 def relu(z):
@@ -148,11 +149,16 @@ def choose(activation):
     if activation == 'relu':
         ac_func = relu
         ac_func_d = relu_d
-    if activation == 'tanh':
+    elif activation == 'tanh':
         ac_func = tanh
         ac_func_d = tanh_d
     elif activation == 'softmax':
         ac_func = softmax
         ac_func_d = softmax_d
+    else:
+        warnings.warn("Warning: activation function '" + str(activation) +
+                      "' not recognized, using relu activation function.")
+        ac_func = relu
+        ac_func_d = relu_d
             
     return ac_func, ac_func_d

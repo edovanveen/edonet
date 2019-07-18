@@ -31,6 +31,10 @@ class Conv2DLayer:
         self.filter_size = filter_size
         self.stride = stride
         self.ac_func, self.ac_func_d = edonet.functions.activation.choose(activation)
+        self.filters = None
+        self.bias = None
+        self.x_cache = None
+        self.z_cache = None
         
         # Take care of padding.
         if padding == 'same':
@@ -39,7 +43,7 @@ class Conv2DLayer:
                              int(np.ceil((filter_size[0] - 1) / 2))),
                             (int(np.floor((filter_size[1] - 1) / 2)),
                              int(np.ceil((filter_size[1] - 1) / 2))),
-                            (0,0))
+                            (0, 0))
         elif padding == 'valid':
             self.padding = ((0, 0), (0, 0), (0, 0), (0, 0))
         self.padded_size = (self.input_size[0] + np.sum(self.padding[1]),
@@ -147,7 +151,9 @@ class Conv2DLayer:
         d_y_times_filters = np.tensordot(self.d_y, self.filters, axes=((1,), (2,)))
         dz_dx = np.tensordot(self.d_x, d_y_times_filters, axes=((1,), (3,)))
         dloss_dx = np.tensordot(dloss_dz, dz_dx, axes=((1, 2, 3), (1, 3, 5)))
-        
+        dloss_dx = dloss_dx[:, self.padding[1][0]:self.padded_size[0] - self.padding[1][1],
+                            self.padding[2][0]:self.padded_size[1] - self.padding[2][1], :]
+
         # Update weights.
         w_update = np.average(dloss_dw, axis=0)
         b_update = np.average(dloss_dz, axis=(0, 1, 2))
@@ -176,6 +182,7 @@ class MaxPool2DLayer:
         # Save relevant attributes.
         self.input_size = input_size
         self.pool_size = pool_size
+        self.i_cache = None
         self.output_size = (self.input_size[0] // self.pool_size[0],
                             self.input_size[1] // self.pool_size[1],
                             self.input_size[2])
@@ -201,19 +208,19 @@ class MaxPool2DLayer:
         p, q = self.pool_size
         
         # Reshape x to a tensor from which we can take the maximum of two axes.
-        x_reshaped = x.reshape(nr_examples, m, p, n, q, nr_channels)
+        x_reshaped = x.reshape((nr_examples, m, p, n, q, nr_channels))
         
         # Take maximum but keep dimensions.
         y = x_reshaped.max(axis=(2, 4), keepdims=True)
         
         # Make mask of maximum values. Warning: this only works if maximum values are unique!
         # Maybe divide by some kind of count? Would that help?
-        self.i_cache = (x_reshaped == y).reshape(x.shape).astype(int)
+        self.i_cache = np.array(x_reshaped == y).reshape(x.shape).astype(int)
         
         # Reshape y to new dimensions.
-        return y.reshape(nr_examples, m, n, nr_channels)
+        return y.reshape((nr_examples, m, n, nr_channels))
 
-    def back_prop(self, dloss_dy, learning_rate):
+    def back_prop(self, dloss_dy, _):
         """
         Do backward propagation through the layer.
 
@@ -221,6 +228,8 @@ class MaxPool2DLayer:
         ----------
         dloss_dy : np.array of floats, shape (number of examples,) + self.output_size
             Derivative of loss with respect to output values.
+        _ : placeholder
+            Placeholder parameter for learning_rate.
             
         Returns
         -------
@@ -235,10 +244,10 @@ class MaxPool2DLayer:
         p, q = self.pool_size
         
         # Expand the derivative to the input shape.
-        dloss_dy_reshaped = dloss_dy.reshape(nr_examples, m, 1, n, 1, nr_channels)
+        dloss_dy_reshaped = dloss_dy.reshape((nr_examples, m, 1, n, 1, nr_channels))
         dloss_dy_expanded = np.einsum('abcefh,cd,fg->abdegh', 
                                       dloss_dy_reshaped, np.ones((1, q)), np.ones((1, p)))
-        dloss_dy_expanded = dloss_dy_expanded.reshape(nr_examples, a, b, nr_channels)
+        dloss_dy_expanded = dloss_dy_expanded.reshape((nr_examples, a, b, nr_channels))
         
         # Apply the cached mask to the derivative.
         return np.multiply(dloss_dy_expanded, self.i_cache)
@@ -279,7 +288,7 @@ class FlattenLayer:
         # Flatten x (except for first dimension) using reshape.
         return np.reshape(x, newshape=(x.shape[0], self.nr_flat))
 
-    def back_prop(self, dloss_do, learning_rate):
+    def back_prop(self, dloss_do, _):
         """
         Do backward propagation through the layer.
 
@@ -287,6 +296,8 @@ class FlattenLayer:
         ----------
         dloss_do : np.array of floats, shape (number of examples, self.nr_flat)
             Derivative of loss with respect to output values.
+        _ : placeholder
+            Placeholder parameter for learning_rate.
             
         Returns
         -------
@@ -317,8 +328,11 @@ class DenseLayer:
         # Save relevant attributes.
         self.nr_inputs = nr_inputs
         self.output_size = nr_nodes
-        self.z_cache = np.zeros((nr_nodes, 1))
         self.ac_func, self.ac_func_d = edonet.functions.activation.choose(activation)
+        self.weights = None
+        self.bias = None
+        self.x_cache = None
+        self.z_cache = None
         self.init_weights()
             
     def init_weights(self):
@@ -511,8 +525,8 @@ class NeuralNet:
             for i in range(nr_batches):
                 
                 # Forward propagation.
-                x_batch = x[i*batch_size:min(nr_examples,(i+1)*batch_size):,:]
-                y_batch = y_true[i*batch_size:min(nr_examples,(i+1)*batch_size):,:]
+                x_batch = x[i*batch_size:min(nr_examples, (i+1)*batch_size):, :]
+                y_batch = y_true[i*batch_size:min(nr_examples, (i+1)*batch_size):, :]
                 y_pred = self.predict(x_batch)
                 
                 # Calculate average loss.

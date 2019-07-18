@@ -8,8 +8,8 @@ import edonet
 # Make test dataset.
 def make_dataset():
     x, y = make_moons(n_samples=1200, noise=0.2, random_state=0)
-    x[:,0] = (x[:,0] - 0.5)/2
-    x[:,1] = (x[:,1] - 0.25)/1.5
+    x[:, 0] = (x[:, 0] - 0.5)/2
+    x[:, 1] = (x[:, 1] - 0.25)/1.5
     encoder = [[1, 0], [0, 1]]
     y = np.array([encoder[i] for i in y])
     return train_test_split(x, y, random_state=0)
@@ -33,15 +33,15 @@ def make_meshgrid(x, y, h=.02):
 
 # Plot decision boundary.
 def plot_contours(ax, model, xx, yy, **params):
-    Z = model.predict(np.c_[xx.ravel(), yy.ravel()]).argmax(axis=1)
-    Z = Z.reshape(xx.shape)
-    out = ax.contourf(xx, yy, Z, **params)
+    z = model.predict(np.c_[xx.ravel(), yy.ravel()]).argmax(axis=1)
+    z = z.reshape(xx.shape)
+    out = ax.contourf(xx, yy, z, **params)
     return out
     
     
 # Show decision boundary and scatter dataset.
 def show_data_and_decision(model, x, y):
-    fig, ax = plt.subplots(figsize=(8,6))
+    fig, ax = plt.subplots(figsize=(8, 6))
     x0, x1 = x[:, 0], x[:, 1]
     xx, yy = make_meshgrid(x0, x1)
     plot_contours(ax, model, xx, yy, cmap=plt.cm.coolwarm, alpha=0.8)
