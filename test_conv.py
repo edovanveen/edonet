@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
 import edonet
 
@@ -42,11 +41,13 @@ def main():
                                      {'type': 'dense', 'nr_nodes': 10, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
-    model.fit(x_train, y_train, epochs=30, learning_rate=0.01, batch_size=50)
+    model.fit(x_train, y_train, epochs=50, learning_rate=0.01, batch_size=100)
 
     # Show result on test set.
-    print("test labels: ", y_test.argmax(axis=1))
-    print("pred labels: ", model.predict(x_test).argmax(axis=1))
+    print("test labels:")
+    print(y_test.argmax(axis=1))
+    print("pred labels:")
+    print(model.predict(x_test).argmax(axis=1))
     print("accuracy: ", accuracy(y_test, model.predict(x_test))) 
 
 

@@ -2,14 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_moons
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 import edonet
 
 
 # Make test dataset.
 def make_dataset():
     x, y = make_moons(n_samples=1200, noise=0.2, random_state=0)
-    x[:, 0] = (x[:, 0] - 0.5)/2
-    x[:, 1] = (x[:, 1] - 0.25)/1.5
+    scaler = StandardScaler()
+    scaler.fit(x)
+    x = scaler.transform(x)
     encoder = [[1, 0], [0, 1]]
     y = np.array([encoder[i] for i in y])
     return train_test_split(x, y, random_state=0)
@@ -58,12 +60,12 @@ def main():
     # Make and train model.
     model = edonet.NeuralNet(input_size=2,
                              layers=({'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
-                                     {'type': 'dense', 'nr_nodes': 16, 'activation': 'tanh'},
+                                     {'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
                                      {'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
                                      {'type': 'dense', 'nr_nodes': 2, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
-    model.fit(x_train, y_train, epochs=100, learning_rate=0.1, batch_size=10)
+    model.fit(x_train, y_train, epochs=100, learning_rate=0.05, batch_size=10)
 
     # Show result on test set.
     print("accuracy: ", accuracy(y_test, model.predict(x_test)))

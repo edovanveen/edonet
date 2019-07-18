@@ -84,12 +84,12 @@ class Conv2DLayer:
         # Keep track of dimensions
         a, b, c, d = (self.input_size[2],) + self.filter_size + (self.nr_filters,)
         
-        # Set weight scaling parameter. Can this be improved?
-        scaling = np.sqrt(2) / np.sqrt(a * b * c * d)
+        # Set weight scaling parameter. See https://arxiv.org/pdf/1502.01852.pdf.
+        stdev = np.sqrt(2) / np.sqrt(a * b * c * d)
         
         # Initialize weights.
-        self.filters = scaling * (2 * np.random.rand(a, b, c, d) - 1)
-        self.bias = scaling * (2 * np.random.rand(1, 1, 1, d) - 1)
+        self.filters = np.random.normal(loc=0., scale=stdev, size=(a, b, c, d))
+        self.bias = np.zeros((1, 1, 1, d))
 
     def forward_prop(self, x):
         """
@@ -245,8 +245,7 @@ class MaxPool2DLayer:
         
         # Expand the derivative to the input shape.
         dloss_dy_reshaped = dloss_dy.reshape((nr_examples, m, 1, n, 1, nr_channels))
-        dloss_dy_expanded = np.einsum('abcefh,cd,fg->abdegh', 
-                                      dloss_dy_reshaped, np.ones((1, q)), np.ones((1, p)))
+        dloss_dy_expanded = np.multiply(dloss_dy_reshaped, np.ones((1, 1, p, 1, q, 1)))
         dloss_dy_expanded = dloss_dy_expanded.reshape((nr_examples, a, b, nr_channels))
         
         # Apply the cached mask to the derivative.
@@ -339,9 +338,10 @@ class DenseLayer:
         """Initialize weights and bias."""
         
         # Can we optimize this initialization further?
-        scaling = np.sqrt(2) / np.sqrt(self.nr_inputs)
-        self.weights = scaling * (2 * np.random.rand(self.nr_inputs, self.output_size) - 1)
-        self.bias = scaling * (2 * np.random.rand(1) - 1)
+        stdev = np.sqrt(2) / np.sqrt(self.output_size)
+        # stdev = np.sqrt(2) / np.sqrt(self.nr_inputs * self.output_size)
+        self.weights = np.random.normal(loc=0., scale=stdev, size=(self.nr_inputs, self.output_size))
+        self.bias = np.zeros((1, self.output_size))
 
     def forward_prop(self, x):
         """
@@ -393,14 +393,9 @@ class DenseLayer:
             dloss_dw[n] = np.tensordot(self.x_cache[n], dloss_dz[n], axes=0)
             dloss_dx[n] = np.tensordot(self.weights, dloss_dz[n], axes=1)
         
-        # Calculate derivatives using np.einsum().
-        # This is actually faster for small layers? Do more testing!
-        # dloss_dw = np.einsum('ac,ab->abc', dloss_dz, self.x_cache)
-        # dloss_dx = np.einsum('ac,bc->ab', dloss_dz, self.weights)
-        
         # Update weights.
         w_update = np.average(dloss_dw, axis=0)
-        b_update = np.average(dloss_dw)
+        b_update = np.average(dloss_dw, axis=(0, 1))
         self.weights = self.weights - learning_rate * w_update
         self.bias = self.bias - learning_rate * b_update
         
