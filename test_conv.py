@@ -33,15 +33,18 @@ def main():
     # Make and train model.
     model = edonet.NeuralNet(input_size=(28, 28, 1),
                              layers=({'type': 'conv2D', 'nr_filters': 16, 'filter_size': (3, 3),
-                                      'activation': 'relu', 'stride': (1, 1), 'padding': 'valid'},
+                                      'activation': 'relu', 'stride': (1, 1), 'padding': 'same'},
+                                     {'type': 'maxpool', 'pool_size': (2, 2)},
+                                     {'type': 'conv2D', 'nr_filters': 16, 'filter_size': (3, 3),
+                                      'activation': 'relu', 'stride': (1, 1), 'padding': 'same'},
                                      {'type': 'maxpool', 'pool_size': (2, 2)},
                                      {'type': 'flatten'},
-                                     {'type': 'dense', 'nr_nodes': 64, 'activation': 'relu'},
-                                     {'type': 'dense', 'nr_nodes': 32, 'activation': 'tanh'},
+                                     {'type': 'dense', 'nr_nodes': 200, 'activation': 'relu'},
+                                     {'type': 'dense', 'nr_nodes': 50, 'activation': 'tanh'},
                                      {'type': 'dense', 'nr_nodes': 10, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
-    model.fit(x_train, y_train, epochs=70, learning_rate=0.01, batch_size=50)
+    model.fit(x_train, y_train, epochs=70, learning_rate=0.005, batch_size=50)
 
     # Show result on test set.
     print("test labels:")

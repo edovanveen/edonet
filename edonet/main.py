@@ -115,13 +115,10 @@ class Conv2DLayer:
         p, q = self.filter_size
         
         # Create x_cache and z_cache.
-        self.x_cache = np.zeros((nr_examples, k, p, m, q, n))
-        self.z_cache = np.zeros((nr_examples, m, n, c))
-        for n in range(nr_examples):
-            x_pad_times_d_x = np.tensordot(x_pad[n], self.d_x, axes=((0,), (0,)))
-            self.x_cache[n] = np.tensordot(x_pad_times_d_x, self.d_y, axes=((0,), (0,)))
-            self.z_cache[n] = np.tensordot(self.x_cache[n], self.filters, 
-                                           axes=((0, 1, 3), (0, 1, 2))) + self.bias
+        x_pad_times_d_x = np.tensordot(x_pad, self.d_x, axes=((1,), (0,)))
+        self.x_cache = np.tensordot(x_pad_times_d_x, self.d_y, axes=((1,), (0,)))
+        self.z_cache = np.tensordot(self.x_cache, self.filters, 
+                                    axes=((1, 2, 4), (0, 1, 2))) + self.bias
 
         return self.ac_func(self.z_cache)
 
@@ -387,16 +384,12 @@ class DenseLayer:
         
         # Calculate derivatives.
         dloss_dz = self.ac_func_d(self.z_cache, dloss_dy)
-        dloss_dw = np.zeros((nr_examples,) + self.weights.shape)
-        dloss_dx = np.zeros((nr_examples, self.nr_inputs))
-        for n in range(nr_examples):
-            dloss_dw[n] = np.tensordot(self.x_cache[n], dloss_dz[n], axes=0)
-            dloss_dx[n] = np.tensordot(self.weights, dloss_dz[n], axes=1)
+        dloss_dw = np.tensordot(self.x_cache, dloss_dz, axes=((0,), (0,))) / nr_examples
+        dloss_dx = np.tensordot(dloss_dz, self.weights, axes=((1,), (1,)))
         
         # Update weights.
-        w_update = np.average(dloss_dw, axis=0)
-        b_update = np.average(dloss_dw, axis=(0, 1))
-        self.weights = self.weights - learning_rate * w_update
+        b_update = np.sum(dloss_dw, axis=0, keepdims=True) / self.nr_inputs
+        self.weights = self.weights - learning_rate * dloss_dw
         self.bias = self.bias - learning_rate * b_update
         
         # Return derivative of loss with respect to inputs x

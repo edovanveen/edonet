@@ -36,7 +36,7 @@ def relu_d(z, dloss_dy):
         Derivatives of loss with respect to inputs of relu function.
     """
     
-    dy_dz = np.array(z > 0, dtype=int)
+    dy_dz = np.int64(z > 0)
     return np.multiply(dloss_dy, dy_dz)
 
 
