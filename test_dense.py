@@ -8,7 +8,7 @@ import edonet
 
 # Make test dataset.
 def make_dataset():
-    x, y = make_moons(n_samples=1200, noise=0.2, random_state=0)
+    x, y = make_moons(n_samples=4000, noise=0.2, random_state=0)
     scaler = StandardScaler()
     scaler.fit(x)
     x = scaler.transform(x)
@@ -59,13 +59,13 @@ def main():
     
     # Make and train model.
     model = edonet.NeuralNet(input_size=2,
-                             layers=({'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
-                                     {'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
-                                     {'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
+                             layers=({'type': 'dense', 'nr_nodes': 8, 'activation': 'relu'},
+                                     {'type': 'dense', 'nr_nodes': 8, 'activation': 'tanh'},
+                                     {'type': 'dense', 'nr_nodes': 8, 'activation': 'relu'},
                                      {'type': 'dense', 'nr_nodes': 2, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
-    model.fit(x_train, y_train, epochs=100, learning_rate=0.05, batch_size=10)
+    model.fit(x_train, y_train, epochs=30, learning_rate=0.1, batch_size=100)
 
     # Show result on test set.
     print("accuracy: ", accuracy(y_test, model.predict(x_test)))
