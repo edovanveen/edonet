@@ -154,8 +154,7 @@ class Conv2DLayer:
         dloss_dx = np.tensordot(dloss_dz, dz_dx, axes=((1, 2, 3), (1, 3, 5)))
         dloss_dx = dloss_dx[:, self.padding[1][0]:self.padded_size[0] - self.padding[1][1],
                             self.padding[2][0]:self.padded_size[1] - self.padding[2][1], :]
-        dloss_dw = np.average(dloss_dw, axis=0)
-        dloss_db = np.average(dloss_dw, axis=(0, 1))
+        dloss_db = np.average(dloss_dw, axis=(0, 1, 2))
 
         # Update weights.
         if update_weights:
