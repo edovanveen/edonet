@@ -19,7 +19,7 @@ def cel(y_pred, y_true):
        Loss values per example.
     """
     
-    epsilon = 1e-15
+    epsilon = 1e-16
     return -1. * np.sum(np.multiply(y_true, np.log(np.maximum(y_pred, epsilon))), axis=1)
 
 

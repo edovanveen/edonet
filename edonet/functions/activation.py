@@ -93,7 +93,7 @@ def softmax(z):
        Output values.
     """
     
-    expz = np.subtract(np.exp(z), np.amax(z, axis=1, keepdims=True))
+    expz = np.exp(z)
     return np.divide(expz, np.sum(expz, axis=1, keepdims=True))
 
 

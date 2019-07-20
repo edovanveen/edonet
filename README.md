@@ -1,5 +1,5 @@
 # edonet
-A minimal neural network for educational purposes, written in Python 3 using only the numpy library for speedy tensor operations.
+A minimal neural network, written in Python 3 using only the numpy library for speedy tensor operations.
 
 ## Requirements
 * numpy
@@ -28,17 +28,18 @@ y_pred = model.predict(x_test)
 ```
 ## To do
 
-* Figure out correct weight initialization to prevent diminishing/exploding gradients 
+* Figure out good weight initialization to prevent diminishing/exploding gradients - 
+  initialization should depend on activation function
   ([link1](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf), [link2](https://arxiv.org/pdf/1502.01852.pdf));
 * Double check all backprop tensor equations, do 
   [gradient checking](http://cs231n.github.io/neural-networks-3/?source=post_page---------------------------#gradcheck);
 * Rethink NeuralNet layers argument, dict currently a bit clunky;
+* Inputs should be rescaled automatically;
 * Add NeuralNet.save() and NeuralNet.load() functionalities;
 * Add more activation and loss functions.
 
 ## Issues
 
-* Inputs should be rescaled properly;
 * MaxPool2DLayer: creation of the cached mask goes wrong when multiple elements are equal to max.
 
 ## Authors

@@ -13,7 +13,7 @@ def make_dataset():
     encoder = np.eye(10, dtype=int)
     y_train = np.array([encoder[i] for i in y_train])
     y_test = np.array([encoder[i] for i in y_test])
-    return x_train[::50], x_test[::50], y_train[::50], y_test[::50]
+    return x_train, x_test, y_train, y_test
 
 
 # Check accuracy.
@@ -30,21 +30,23 @@ def main():
     # Make dataset.
     x_train, x_test, y_train, y_test = make_dataset()
     
-    # Make and train model.
+    # Make model.
     model = edonet.NeuralNet(input_size=(28, 28, 1),
-                             layers=({'type': 'conv2D', 'nr_filters': 16, 'filter_size': (3, 3),
+                             layers=({'type': 'conv2D', 'nr_filters': 20, 'filter_size': (3, 3),
                                       'activation': 'relu', 'stride': (1, 1), 'padding': 'same'},
                                      {'type': 'maxpool', 'pool_size': (2, 2)},
-                                     {'type': 'conv2D', 'nr_filters': 16, 'filter_size': (3, 3),
+                                     {'type': 'conv2D', 'nr_filters': 10, 'filter_size': (3, 3),
                                       'activation': 'relu', 'stride': (1, 1), 'padding': 'same'},
                                      {'type': 'maxpool', 'pool_size': (2, 2)},
                                      {'type': 'flatten'},
-                                     {'type': 'dense', 'nr_nodes': 200, 'activation': 'relu'},
-                                     {'type': 'dense', 'nr_nodes': 50, 'activation': 'tanh'},
+                                     {'type': 'dense', 'nr_nodes': 32, 'activation': 'relu'},
+                                     {'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
                                      {'type': 'dense', 'nr_nodes': 10, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
-    model.fit(x_train, y_train, epochs=70, learning_rate=0.005, batch_size=50)
+
+    # Train model with decreasing learning rate.
+    model.fit(x_train, y_train, epochs=10, learning_rate=0.05, batch_size=500, verbose=True)
 
     # Show result on test set.
     print("test labels:")

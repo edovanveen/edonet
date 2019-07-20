@@ -481,7 +481,7 @@ class NeuralNet:
         for layer in self.layers[::-1]:
             dloss_dx = layer.back_prop(dloss_dx, learning_rate)
     
-    def fit(self, x, y_true, epochs=1, learning_rate=0.1, batch_size=100):
+    def fit(self, x, y_true, epochs=1, learning_rate=0.1, batch_size=100, verbose=False):
         """
         Fit neural net to training set x, y_true
 
@@ -497,6 +497,8 @@ class NeuralNet:
             Learning rate of the network. Default: 0.1.
         batch_size : int, optional
             Batch size. Default: 100.
+        verbose : bool, optional
+            Print update for each batch. Default: False
         """
         
         # Calculate number of batches.
@@ -519,6 +521,10 @@ class NeuralNet:
                 
                 # Calculate average loss.
                 avg_loss[i] = np.average(self.loss(y_pred, y_batch))
+                
+                # Print status.
+                if verbose:
+                    print("- Batch: ", i, "/", nr_batches, ", loss: ", avg_loss[i])
                 
                 # Backpropagation and gradient descent.
                 self.grad_desc(y_pred, y_batch, learning_rate)
