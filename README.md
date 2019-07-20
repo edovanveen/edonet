@@ -35,7 +35,8 @@ y_pred = model.predict(x_test)
   [gradient checking](http://cs231n.github.io/neural-networks-3/?source=post_page---------------------------#gradcheck);
 * Rethink NeuralNet layers argument, dict currently a bit clunky;
 * Inputs should be rescaled automatically;
-* Add NeuralNet.save() and NeuralNet.load() functionalities;
+* Add NeuralNet.save() and NeuralNet.load() functionalities for saving weights and structure;
+* Add NeuralNet.describe() functionality that shows all layers and sizes.
 * Add more activation and loss functions.
 
 ## Issues

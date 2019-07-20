@@ -84,7 +84,7 @@ class Conv2DLayer:
         # Keep track of dimensions
         a, b, c, d = (self.input_size[2],) + self.filter_size + (self.nr_filters,)
         
-        # Set weight scaling parameter. See https://arxiv.org/pdf/1502.01852.pdf.
+        # Set weight scaling parameter.
         stdev = np.sqrt(2) / np.sqrt(a * b * c * d)
         
         # Initialize weights.
@@ -122,7 +122,7 @@ class Conv2DLayer:
 
         return self.ac_func(self.z_cache)
 
-    def back_prop(self, dloss_dy, learning_rate):
+    def back_prop(self, dloss_dy, learning_rate, update_weights=True, store_derivatives=False):
         """
         Do backpropagation and update weights.
         
@@ -132,6 +132,10 @@ class Conv2DLayer:
             Derivative of the loss with respect to output values.
         learning_rate : float
             Learning rate.
+        update_weights : bool, optional
+            Update weights during back propagation. Default: True.
+        store_derivatives : bool, optional
+            Store the weight and bias derivatives. Default: False
             
         Returns
         -------
@@ -150,12 +154,18 @@ class Conv2DLayer:
         dloss_dx = np.tensordot(dloss_dz, dz_dx, axes=((1, 2, 3), (1, 3, 5)))
         dloss_dx = dloss_dx[:, self.padding[1][0]:self.padded_size[0] - self.padding[1][1],
                             self.padding[2][0]:self.padded_size[1] - self.padding[2][1], :]
+        dloss_dw = np.average(dloss_dw, axis=0)
+        dloss_db = np.average(dloss_dw, axis=(0, 1))
 
         # Update weights.
-        w_update = np.average(dloss_dw, axis=0)
-        b_update = np.average(dloss_dz, axis=(0, 1, 2))
-        self.filters = self.filters - learning_rate * w_update
-        self.bias = self.bias - learning_rate * b_update
+        if update_weights:
+            self.filters = self.filters - learning_rate * dloss_dw
+            self.bias = self.bias - learning_rate * dloss_db
+        
+        # Store derivatives.
+        if store_derivatives:
+            self.dloss_dw = dloss_dw
+            self.dloss_db = dloss_db
         
         # Return derivative of loss with respect to inputs x
         return dloss_dx
@@ -217,7 +227,7 @@ class MaxPool2DLayer:
         # Reshape y to new dimensions.
         return y.reshape((nr_examples, m, n, nr_channels))
 
-    def back_prop(self, dloss_dy, _):
+    def back_prop(self, dloss_dy, _0, _1=True, _2=False):
         """
         Do backward propagation through the layer.
 
@@ -225,8 +235,12 @@ class MaxPool2DLayer:
         ----------
         dloss_dy : np.array of floats, shape (number of examples,) + self.output_size
             Derivative of loss with respect to output values.
-        _ : placeholder
+        _0 : placeholder
             Placeholder parameter for learning_rate.
+        _1 : placeholder
+            Placeholder parameter for update_weights.
+        _2 : placeholder
+            Placeholder parameter for store_derivatives.
             
         Returns
         -------
@@ -284,7 +298,7 @@ class FlattenLayer:
         # Flatten x (except for first dimension) using reshape.
         return np.reshape(x, newshape=(x.shape[0], self.nr_flat))
 
-    def back_prop(self, dloss_do, _):
+    def back_prop(self, dloss_do, _0, _1=True, _2=False):
         """
         Do backward propagation through the layer.
 
@@ -294,6 +308,10 @@ class FlattenLayer:
             Derivative of loss with respect to output values.
         _ : placeholder
             Placeholder parameter for learning_rate.
+        _1 : placeholder
+            Placeholder parameter for update_weights.
+        _2 : placeholder
+            Placeholder parameter for store_derivatives.
             
         Returns
         -------
@@ -363,7 +381,7 @@ class DenseLayer:
         y = self.ac_func(self.z_cache)
         return y
 
-    def back_prop(self, dloss_dy, learning_rate):
+    def back_prop(self, dloss_dy, learning_rate, update_weights=True, store_derivatives=False):
         """
         Do backward propagation through the network and update the weights accordingly.
 
@@ -373,6 +391,10 @@ class DenseLayer:
             Derivative of loss with respect to output values.
         learning_rate : float
             Learning rate for updating weights.
+        update_weights : bool, optional
+            Update weights during back propagation. Default: True.
+        store_derivatives : bool, optional
+            Store the weight and bias derivatives. Default: False
             
         Returns
         -------
@@ -386,11 +408,17 @@ class DenseLayer:
         dloss_dz = self.ac_func_d(self.z_cache, dloss_dy)
         dloss_dw = np.tensordot(self.x_cache, dloss_dz, axes=((0,), (0,))) / nr_examples
         dloss_dx = np.tensordot(dloss_dz, self.weights, axes=((1,), (1,)))
+        dloss_db = np.sum(dloss_dw, axis=0, keepdims=True) / self.nr_inputs
         
         # Update weights.
-        b_update = np.sum(dloss_dw, axis=0, keepdims=True) / self.nr_inputs
-        self.weights = self.weights - learning_rate * dloss_dw
-        self.bias = self.bias - learning_rate * b_update
+        if update_weights:
+            self.weights = self.weights - learning_rate * dloss_dw
+            self.bias = self.bias - learning_rate * dloss_db
+        
+        # Store derivatives.
+        if store_derivatives:
+            self.dloss_dw = dloss_dw
+            self.dloss_db = dloss_db
         
         # Return derivative of loss with respect to inputs x
         return dloss_dx
