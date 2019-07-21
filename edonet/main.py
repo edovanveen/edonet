@@ -5,7 +5,7 @@ import edonet.functions
 
 class Conv2DLayer:
 
-    def __init__(self, input_size, nr_filters, filter_size, activation, stride=(1, 1), padding='valid'):
+    def __init__(self, input_size, index, nr_filters, filter_size, activation, stride=(1, 1), padding='valid'):
         """
         Initialize a 2D convolution layer.
         
@@ -13,6 +13,8 @@ class Conv2DLayer:
         ----------
         input_size : 3-tuple of ints
             Size of the input, e.g. (256, 256, 3) for a 256 by 256 rgb image.
+        index : int
+            Layer index (for identification).
         nr_filters : int
             Number of convolutional filters.
         filter_size : 2-tuple of ints
@@ -27,14 +29,19 @@ class Conv2DLayer:
         
         # Save attributes.
         self.input_size = input_size
+        self.index = index
         self.nr_filters = nr_filters
         self.filter_size = filter_size
         self.stride = stride
         self.ac_func, self.ac_func_d = edonet.functions.activation.choose(activation)
-        self.filters = None
+        self.weights = None
         self.bias = None
         self.x_cache = None
         self.z_cache = None
+        self.dloss_dw = None
+        self.dloss_db = None
+        self.has_weights = True
+        self.init_weights()
         
         # Take care of padding.
         if padding == 'same':
@@ -72,9 +79,6 @@ class Conv2DLayer:
                 for ij in range(n):
                     if sy * ij + iq == ib:
                         self.d_y[ib, iq, ij] = 1
-                        
-        # Create intial filter weights.
-        self.init_weights()
         
     def init_weights(self):
         """
@@ -88,7 +92,7 @@ class Conv2DLayer:
         stdev = np.sqrt(2) / np.sqrt(a * b * c * d)
         
         # Initialize weights.
-        self.filters = np.random.normal(loc=0., scale=stdev, size=(a, b, c, d))
+        self.weights = np.random.normal(loc=0., scale=stdev, size=(a, b, c, d))
         self.bias = np.zeros((1, 1, 1, d))
 
     def forward_prop(self, x):
@@ -117,25 +121,19 @@ class Conv2DLayer:
         # Create x_cache and z_cache.
         x_pad_times_d_x = np.tensordot(x_pad, self.d_x, axes=((1,), (0,)))
         self.x_cache = np.tensordot(x_pad_times_d_x, self.d_y, axes=((1,), (0,)))
-        self.z_cache = np.tensordot(self.x_cache, self.filters, 
+        self.z_cache = np.tensordot(self.x_cache, self.weights, 
                                     axes=((1, 2, 4), (0, 1, 2))) + self.bias
 
         return self.ac_func(self.z_cache)
 
-    def back_prop(self, dloss_dy, learning_rate, update_weights=True, store_derivatives=False):
+    def back_prop(self, dloss_dy):
         """
-        Do backpropagation and update weights.
+        Do backpropagation.
         
         Parameters
         ----------
         dloss_dy : np.array of floats, shape (nr_examples,) + self.output_size
             Derivative of the loss with respect to output values.
-        learning_rate : float
-            Learning rate.
-        update_weights : bool, optional
-            Update weights during back propagation. Default: True.
-        store_derivatives : bool, optional
-            Store the weight and bias derivatives. Default: False
             
         Returns
         -------
@@ -147,32 +145,34 @@ class Conv2DLayer:
         
         # Calculate derivatives.
         dloss_dz = self.ac_func_d(self.z_cache, dloss_dy)
-        dloss_dw = (1/nr_examples) * np.tensordot(self.x_cache, dloss_dz, 
-                                                  axes=((0, 3, 5), (0, 1, 2)))
-        d_y_times_filters = np.tensordot(self.d_y, self.filters, axes=((1,), (2,)))
+        self.dloss_dw = (1/nr_examples) * np.tensordot(self.x_cache, dloss_dz, 
+                                                       axes=((0, 3, 5), (0, 1, 2)))
+        d_y_times_filters = np.tensordot(self.d_y, self.weights, axes=((1,), (2,)))
         dz_dx = np.tensordot(self.d_x, d_y_times_filters, axes=((1,), (3,)))
         dloss_dx = np.tensordot(dloss_dz, dz_dx, axes=((1, 2, 3), (1, 3, 5)))
         dloss_dx = dloss_dx[:, self.padding[1][0]:self.padded_size[0] - self.padding[1][1],
                             self.padding[2][0]:self.padded_size[1] - self.padding[2][1], :]
-        dloss_db = np.average(dloss_dw, axis=(0, 1, 2))
-
-        # Update weights.
-        if update_weights:
-            self.filters = self.filters - learning_rate * dloss_dw
-            self.bias = self.bias - learning_rate * dloss_db
-        
-        # Store derivatives.
-        if store_derivatives:
-            self.dloss_dw = dloss_dw
-            self.dloss_db = dloss_db
+        self.dloss_db = np.average(self.dloss_dw, axis=(0, 1, 2))
         
         # Return derivative of loss with respect to inputs x
         return dloss_dx
+        
+    def update_weights(self, learning_rate):
+        """
+        Update weights using gradients.
+        
+        Parameters
+        ----------
+        learning_rate : float
+            Learning rate.
+        """
+        self.weights = self.weights - learning_rate * self.dloss_dw
+        self.bias = self.bias - learning_rate * self.dloss_db
     
     
 class MaxPool2DLayer:
 
-    def __init__(self, input_size, pool_size=(2, 2)):
+    def __init__(self, input_size, index, pool_size=(2, 2)):
         """
         Initialize a 2D max pooling layer.
         
@@ -180,6 +180,8 @@ class MaxPool2DLayer:
         ----------
         input_size : 3-tuple of ints
             Size of the input, e.g. (256, 256, 3) for a 256 by 256 rgb image.
+        index : int
+            Layer index (for identification).
         pool_size : 2-tuple of ints
             Size of the pooling filter. The first two dimensions of the input
             need to be divisible by the pool size dimensions, respectively.
@@ -187,11 +189,13 @@ class MaxPool2DLayer:
         
         # Save relevant attributes.
         self.input_size = input_size
+        self.index = index
         self.pool_size = pool_size
         self.i_cache = None
         self.output_size = (self.input_size[0] // self.pool_size[0],
                             self.input_size[1] // self.pool_size[1],
                             self.input_size[2])
+        self.has_weights = False
 
     def forward_prop(self, x):
         """
@@ -226,7 +230,7 @@ class MaxPool2DLayer:
         # Reshape y to new dimensions.
         return y.reshape((nr_examples, m, n, nr_channels))
 
-    def back_prop(self, dloss_dy, _0, _1=True, _2=False):
+    def back_prop(self, dloss_dy):
         """
         Do backward propagation through the layer.
 
@@ -234,12 +238,8 @@ class MaxPool2DLayer:
         ----------
         dloss_dy : np.array of floats, shape (number of examples,) + self.output_size
             Derivative of loss with respect to output values.
-        _0 : placeholder
+        _ : placeholder
             Placeholder parameter for learning_rate.
-        _1 : placeholder
-            Placeholder parameter for update_weights.
-        _2 : placeholder
-            Placeholder parameter for store_derivatives.
             
         Returns
         -------
@@ -260,11 +260,11 @@ class MaxPool2DLayer:
         
         # Apply the cached mask to the derivative.
         return np.multiply(dloss_dy_expanded, self.i_cache)
-    
+        
     
 class FlattenLayer:
 
-    def __init__(self, input_size):
+    def __init__(self, input_size, index):
         """
         Initialize a flattening layer.
         
@@ -272,12 +272,16 @@ class FlattenLayer:
         ----------
         input_size : tuple of ints
             Size of the input, e.g. (256, 256, 3) for a 256 by 256 rgb image.
+        index : int
+            Layer index (for identification).
         """
         
         # Save relevant attributes.
         self.input_size = input_size
+        self.index = index
         self.output_size = np.prod(input_size)
         self.nr_flat = np.prod(input_size)
+        self.has_weights = False
 
     def forward_prop(self, x):
         """
@@ -297,20 +301,14 @@ class FlattenLayer:
         # Flatten x (except for first dimension) using reshape.
         return np.reshape(x, newshape=(x.shape[0], self.nr_flat))
 
-    def back_prop(self, dloss_do, _0, _1=True, _2=False):
+    def back_prop(self, dloss_dy):
         """
         Do backward propagation through the layer.
 
         Parameters
         ----------
-        dloss_do : np.array of floats, shape (number of examples, self.nr_flat)
+        dloss_dy : np.array of floats, shape (number of examples, self.nr_flat)
             Derivative of loss with respect to output values.
-        _ : placeholder
-            Placeholder parameter for learning_rate.
-        _1 : placeholder
-            Placeholder parameter for update_weights.
-        _2 : placeholder
-            Placeholder parameter for store_derivatives.
             
         Returns
         -------
@@ -319,12 +317,12 @@ class FlattenLayer:
         """
         
         # Reshape flattened array back to size of input array.
-        return np.reshape(dloss_do, newshape=(dloss_do.shape[0],) + self.input_size)
+        return np.reshape(dloss_dy, newshape=(dloss_dy.shape[0],) + self.input_size)
     
     
 class DenseLayer:
 
-    def __init__(self, nr_inputs, nr_nodes, activation):
+    def __init__(self, nr_inputs, index, nr_nodes, activation):
         """
         Initialize a dense layer.
 
@@ -332,6 +330,8 @@ class DenseLayer:
         ----------
         nr_inputs : int
             Number of input values.
+        index : int
+            Layer index (for identification).
         nr_nodes : int
             Number of nodes.
         activation : str
@@ -340,12 +340,16 @@ class DenseLayer:
         
         # Save relevant attributes.
         self.nr_inputs = nr_inputs
+        self.index = index
         self.output_size = nr_nodes
         self.ac_func, self.ac_func_d = edonet.functions.activation.choose(activation)
         self.weights = None
         self.bias = None
         self.x_cache = None
         self.z_cache = None
+        self.dloss_dw = None
+        self.dloss_db = None
+        self.has_weights = True
         self.init_weights()
             
     def init_weights(self):
@@ -380,7 +384,7 @@ class DenseLayer:
         y = self.ac_func(self.z_cache)
         return y
 
-    def back_prop(self, dloss_dy, learning_rate, update_weights=True, store_derivatives=False):
+    def back_prop(self, dloss_dy):
         """
         Do backward propagation through the network and update the weights accordingly.
 
@@ -388,12 +392,6 @@ class DenseLayer:
         ----------
         dloss_dy : np.array of floats, shape (number of examples, number of nodes)
             Derivative of loss with respect to output values.
-        learning_rate : float
-            Learning rate for updating weights.
-        update_weights : bool, optional
-            Update weights during back propagation. Default: True.
-        store_derivatives : bool, optional
-            Store the weight and bias derivatives. Default: False
             
         Returns
         -------
@@ -405,22 +403,24 @@ class DenseLayer:
         
         # Calculate derivatives.
         dloss_dz = self.ac_func_d(self.z_cache, dloss_dy)
-        dloss_dw = np.tensordot(self.x_cache, dloss_dz, axes=((0,), (0,))) / nr_examples
+        self.dloss_dw = np.tensordot(self.x_cache, dloss_dz, axes=((0,), (0,))) / nr_examples
         dloss_dx = np.tensordot(dloss_dz, self.weights, axes=((1,), (1,)))
-        dloss_db = np.sum(dloss_dw, axis=0, keepdims=True) / self.nr_inputs
-        
-        # Update weights.
-        if update_weights:
-            self.weights = self.weights - learning_rate * dloss_dw
-            self.bias = self.bias - learning_rate * dloss_db
-        
-        # Store derivatives.
-        if store_derivatives:
-            self.dloss_dw = dloss_dw
-            self.dloss_db = dloss_db
+        self.dloss_db = np.sum(self.dloss_dw, axis=0, keepdims=True) / self.nr_inputs
         
         # Return derivative of loss with respect to inputs x
         return dloss_dx
+        
+    def update_weights(self, learning_rate):
+        """
+        Update weights using gradients.
+        
+        Parameters
+        ----------
+        learning_rate : float
+            Learning rate.
+        """
+        self.weights = self.weights - learning_rate * self.dloss_dw
+        self.bias = self.bias - learning_rate * self.dloss_db
 
 
 class NeuralNet:
@@ -447,24 +447,25 @@ class NeuralNet:
         np.random.seed(seed)
         self.input_size = input_size
         self.loss, self.loss_d = edonet.functions.loss.choose(loss)
+        self.optimizer = edonet.functions.optimizer.choose(self, None)
         
         # Helper function for layer creation.
-        def make_layer(layer, inputs):
+        def make_layer(layer, inputs, index):
             if layer['type'] == 'conv2D':
-                return Conv2DLayer(inputs, layer['nr_filters'], layer['filter_size'], 
+                return Conv2DLayer(inputs, index, layer['nr_filters'], layer['filter_size'], 
                                    layer['activation'], layer['stride'], layer['padding'])
             if layer['type'] == 'maxpool':
-                return MaxPool2DLayer(inputs, layer['pool_size'])
+                return MaxPool2DLayer(inputs, index, layer['pool_size'])
             if layer['type'] == 'flatten':
-                return FlattenLayer(inputs)
+                return FlattenLayer(inputs, index)
             if layer['type'] == 'dense':
-                return DenseLayer(inputs, layer['nr_nodes'], layer['activation'])
+                return DenseLayer(inputs, index, layer['nr_nodes'], layer['activation'])
             
         # Make layers.
-        self.layers = [make_layer(layers[0], input_size)]
+        self.layers = [make_layer(layers[0], input_size, 0)]
         layer_indices = np.arange(len(layers))
         for i in layer_indices[1:]:
-            self.layers.append(make_layer(layers[i], self.layers[i-1].output_size))
+            self.layers.append(make_layer(layers[i], self.layers[i-1].output_size, i))
 
     def predict(self, x):
         """
@@ -506,9 +507,11 @@ class NeuralNet:
         
         # Do backpropagation and gradient descent, starting at last layer, moving backwards.
         for layer in self.layers[::-1]:
-            dloss_dx = layer.back_prop(dloss_dx, learning_rate)
+            dloss_dx = layer.back_prop(dloss_dx)
+            if layer.has_weights:
+                self.optimizer.update(layer, learning_rate)
     
-    def fit(self, x, y_true, epochs=1, learning_rate=0.1, batch_size=100, verbose=False):
+    def fit(self, x, y_true, epochs=1, learning_rate=0.001, batch_size=100, optimizer='same', verbose=False):
         """
         Fit neural net to training set x, y_true
 
@@ -521,12 +524,18 @@ class NeuralNet:
         epochs : int, optional
             Number of epochs.
         learning_rate : float, optional
-            Learning rate of the network. Default: 0.1.
+            Learning rate of the network. Default: 0.001.
         batch_size : int, optional
             Batch size. Default: 100.
+        optimizer : str or None, optional
+            Optimizer identifier. If you want to keep the existing optimizer, set to 'same'. Default: 'same'.
         verbose : bool, optional
-            Print update for each batch. Default: False
+            Print update for each batch. Default: False.
         """
+        
+        # Set optimizer.
+        if optimizer != 'same':
+            self.optimizer = edonet.functions.optimizer.choose(self, optimizer)
         
         # Calculate number of batches.
         nr_examples = x.shape[0]

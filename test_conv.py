@@ -32,21 +32,17 @@ def main():
     
     # Make model.
     model = edonet.NeuralNet(input_size=(28, 28, 1),
-                             layers=({'type': 'conv2D', 'nr_filters': 20, 'filter_size': (3, 3),
-                                      'activation': 'relu', 'stride': (1, 1), 'padding': 'same'},
-                                     {'type': 'maxpool', 'pool_size': (2, 2)},
-                                     {'type': 'conv2D', 'nr_filters': 10, 'filter_size': (3, 3),
-                                      'activation': 'relu', 'stride': (1, 1), 'padding': 'same'},
+                             layers=({'type': 'conv2D', 'nr_filters': 50, 'filter_size': (3, 3),
+                                      'activation': 'relu', 'stride': (1, 1), 'padding': 'valid'},
                                      {'type': 'maxpool', 'pool_size': (2, 2)},
                                      {'type': 'flatten'},
-                                     {'type': 'dense', 'nr_nodes': 32, 'activation': 'relu'},
-                                     {'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
+                                     {'type': 'dense', 'nr_nodes': 50, 'activation': 'relu'},
                                      {'type': 'dense', 'nr_nodes': 10, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
 
     # Train model with decreasing learning rate.
-    model.fit(x_train, y_train, epochs=10, learning_rate=0.05, batch_size=500, verbose=True)
+    model.fit(x_train, y_train, epochs=6, learning_rate=0.001, batch_size=200, optimizer='Adam', verbose=True)
 
     # Show result on test set.
     print("test labels:")

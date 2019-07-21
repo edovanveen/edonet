@@ -29,7 +29,7 @@ def main():
     
     # Do backpropagation and store derivatives.
     for layer in model.layers[::-1]:
-        dloss_dx = layer.back_prop(dloss_dx, 0, False, True)
+        dloss_dx = layer.back_prop(dloss_dx)
 
     # Check derivatives of loss wrt inputs x.
     epsilon = 1e-3
@@ -53,16 +53,16 @@ def main():
     
     # Check derivatives of loss wrt weights of conv2d layer.
     dloss_dw = model.layers[0].dloss_dw
-    orig_filters = model.layers[0].filters.copy()
+    orig_filters = model.layers[0].weights.copy()
     dloss_dw_check = np.zeros(dloss_dw.shape)
     for h in range(2):
         for i in range(3):
             for j in range(3):
                 for k in range(2):
-                    model.layers[0].filters = orig_filters.copy()
-                    model.layers[0].filters[h, i, j, k] = orig_filters[h, i, j, k] - epsilon
+                    model.layers[0].weights = orig_filters.copy()
+                    model.layers[0].weights[h, i, j, k] = orig_filters[h, i, j, k] - epsilon
                     y_check0 = model.predict(x)
-                    model.layers[0].filters[h, i, j, k] = orig_filters[h, i, j, k] + epsilon
+                    model.layers[0].weights[h, i, j, k] = orig_filters[h, i, j, k] + epsilon
                     y_check1 = model.predict(x)
                     dloss_dw_check[h, i, j, k] = (model.loss(y_check1, y)[0] - 
                                                   model.loss(y_check0, y)[0]) / (2 * epsilon)
