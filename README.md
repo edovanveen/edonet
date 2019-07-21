@@ -32,13 +32,14 @@ y_pred = model.predict(x_test)
   initialization should depend on activation function
   ([link1](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf), [link2](https://arxiv.org/pdf/1502.01852.pdf));
 * Double check all backprop tensor equations, do 
-  [gradient checking](http://cs231n.github.io/neural-networks-3/?source=post_page---------------------------#gradcheck);
+  [gradient checking](http://cs231n.github.io/neural-networks-3/?source=post_page---------------------------#gradcheck)
+  (already done for conv2d layer);
 * Rethink NeuralNet layers argument, dict currently a bit clunky;
-* Inputs should be rescaled automatically;
-* Implement [Adam](https://arxiv.org/abs/1412.6980);
+* Implement batch (so as to not get a MemoryError) NeuralNet.predict() and NeuralNet.evaluate();
 * Add NeuralNet.save() and NeuralNet.load() functionalities for saving weights and structure;
 * Add NeuralNet.describe() functionality that shows all layers and sizes.
-* Add more activation and loss functions.
+* Add more activation and loss functions, as well as optimizers;
+* Rescale inputs automatically?
 
 ## Issues
 
