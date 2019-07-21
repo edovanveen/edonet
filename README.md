@@ -11,7 +11,7 @@ Example code:
 # Make dataset; the y datasets must be one-hot encoded.
 x_train, x_test, y_train, y_test = make_dataset()
 
-# Make and train model using four dense layers and cross-entropy loss.
+# Make model using a convolutional layer, a maxpool layer, a flatten layer and two dense layers.
 model = edonet.NeuralNet(input_size=2,
                          layers=({'type': 'conv2D', 'nr_filters': 16, 'filter_size': (3, 3),
                                   'activation': 'relu', 'stride': (1, 1), 'padding': 'valid'},
