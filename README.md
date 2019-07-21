@@ -5,27 +5,34 @@ A minimal neural network, written in Python 3 using only the numpy library for s
 * numpy
 
 ## Usage
-To run an example, use `test_dense.py`. For dataset generation and visualisation in `test_dense.py` you will need matplotlib and sklearn.
 
+Example code:
 ```python
 # Make dataset; the y datasets must be one-hot encoded.
 x_train, x_test, y_train, y_test = make_dataset()
 
 # Make and train model using four dense layers and cross-entropy loss.
 model = edonet.NeuralNet(input_size=2,
-                         layers=({'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
-                                 {'type': 'dense', 'nr_nodes': 16, 'activation': 'tanh'},
+                         layers=({'type': 'conv2D', 'nr_filters': 16, 'filter_size': (3, 3),
+                                  'activation': 'relu', 'stride': (1, 1), 'padding': 'valid'},
+                                 {'type': 'maxpool', 'pool_size': (2, 2)},
+                                 {'type': 'flatten'},
                                  {'type': 'dense', 'nr_nodes': 16, 'activation': 'relu'},
                                  {'type': 'dense', 'nr_nodes': 2, 'activation': 'softmax'}),
                          loss='CEL',
                          seed=0)
                          
 # Fit the model to the training data, using 50 iterations.
-model.fit(x_train, y_train, epochs=50, learning_rate=0.1, batch_size=10)
+model.fit(x_train, y_train, epochs=5)
 
 # Do a prediction using the test set.
 y_pred = model.predict(x_test)
 ```
+
+Example files:
+* To run an example of a densely connected neural network, use `test_dense.py`. For dataset generation and visualisation in `test_dense.py` you will need matplotlib and sklearn.
+* To run an example of a convolutional neural network, use `test_conv.py`. For dataset generation you will need tensorflow.
+
 ## To do
 
 * Figure out good weight initialization to prevent diminishing/exploding gradients - 
