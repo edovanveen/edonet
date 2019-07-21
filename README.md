@@ -12,7 +12,8 @@ Example code:
 x_train, x_test, y_train, y_test = make_dataset()
 
 # Make model using a convolutional layer, a maxpool layer, a flatten layer and two dense layers.
-model = edonet.NeuralNet(input_size=2,
+# Inputs are 32 * 32 pixel rgb images, using relu activation functions and cross-entropy loss.
+model = edonet.NeuralNet(input_size=(32, 32, 3),
                          layers=({'type': 'conv2D', 'nr_filters': 16, 'filter_size': (3, 3),
                                   'activation': 'relu', 'stride': (1, 1), 'padding': 'valid'},
                                  {'type': 'maxpool', 'pool_size': (2, 2)},
