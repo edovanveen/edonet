@@ -47,8 +47,8 @@ Example files:
 * Rethink NeuralNet layers argument type, dict currently a bit clunky;
 * Implement mini-batch (so as to not get a MemoryError) NeuralNet.predict() and NeuralNet.evaluate();
 * Add NeuralNet.save() and NeuralNet.load() functionalities for saving weights and structure;
-* Add NeuralNet.describe() functionality that shows all layers and sizes.
-* Add more activation and loss functions, as well as optimizers;
+* Add NeuralNet.describe() functionality that shows all layers and sizes;
+* Add more activation and loss functions, as well as optimizers.
 
 ## Issues
 
