@@ -1,5 +1,4 @@
-import numpy as np
-
+import cupy as cp
 import edonet.functions
 
 
@@ -46,15 +45,15 @@ class Conv2DLayer:
         # Take care of padding.
         if padding == 'same':
             self.padding = ((0, 0),
-                            (int(np.floor((filter_size[0] - 1) / 2)),
-                             int(np.ceil((filter_size[0] - 1) / 2))),
-                            (int(np.floor((filter_size[1] - 1) / 2)),
-                             int(np.ceil((filter_size[1] - 1) / 2))),
+                            (int((filter_size[0] - 1) // 2),
+                             int(-(-(filter_size[0] - 1) // 2))),
+                            (int((filter_size[1] - 1) // 2),
+                             int(-(-(filter_size[1] - 1) // 2))),
                             (0, 0))
         elif padding == 'valid':
             self.padding = ((0, 0), (0, 0), (0, 0), (0, 0))
-        self.padded_size = (self.input_size[0] + np.sum(self.padding[1]),
-                            self.input_size[1] + np.sum(self.padding[2]),
+        self.padded_size = (self.input_size[0] + self.padding[1][0] + self.padding[1][1],
+                            self.input_size[1] + self.padding[2][0] + self.padding[2][1],
                             self.input_size[2])
         
         # Keep track of dimensions.
@@ -67,13 +66,13 @@ class Conv2DLayer:
         m, n, _ = self.output_size
         
         # Create kronecker delta matrices.
-        self.d_x = np.zeros((a, p, m), dtype=int)
+        self.d_x = cp.zeros((a, p, m), dtype=cp.int8)
         for ia in range(a):
             for ip in range(p):
                 for ii in range(m):
                     if sx * ii + ip == ia:
                         self.d_x[ia, ip, ii] = 1
-        self.d_y = np.zeros((b, q, n), dtype=int)
+        self.d_y = cp.zeros((b, q, n), dtype=cp.int8)
         for ib in range(b):
             for iq in range(q):
                 for ij in range(n):
@@ -89,11 +88,11 @@ class Conv2DLayer:
         a, b, c, d = (self.input_size[2],) + self.filter_size + (self.nr_filters,)
         
         # Set weight scaling parameter.
-        stdev = np.sqrt(2) / np.sqrt(a * b * c * d)
+        stdev = cp.sqrt(2) / cp.sqrt(a * b * c * d)
         
         # Initialize weights.
-        self.weights = np.random.normal(loc=0., scale=stdev, size=(a, b, c, d))
-        self.bias = np.zeros((1, 1, 1, d))
+        self.weights = cp.random.normal(loc=0., scale=stdev, size=(a, b, c, d), dtype=cp.float32)
+        self.bias = cp.zeros((1, 1, 1, d), dtype=cp.float32)
 
     def forward_prop(self, x):
         """
@@ -101,17 +100,17 @@ class Conv2DLayer:
         
         Parameters
         ----------
-        x : np.array of floats, shape (nr_examples,) + self.input_size
+        x : cp.array of floats, shape (nr_examples,) + self.input_size
             Inputs.
             
         Returns
         -------
-        np.array of floats, shape (nr_examples,) + self.output_size
+        cp.array of floats, shape (nr_examples,) + self.output_size
             Outputs.
         """
         
         # Add padding.
-        x_pad = np.pad(x, self.padding, 'constant', constant_values=0)
+        x_pad = cp.pad(x, self.padding, 'constant', constant_values=0)
     
         # Keep track of dimensions.
         nr_examples, _, _, k = x.shape
@@ -119,9 +118,9 @@ class Conv2DLayer:
         p, q = self.filter_size
         
         # Create x_cache and z_cache.
-        x_pad_times_d_x = np.tensordot(x_pad, self.d_x, axes=((1,), (0,)))
-        self.x_cache = np.tensordot(x_pad_times_d_x, self.d_y, axes=((1,), (0,)))
-        self.z_cache = np.tensordot(self.x_cache, self.weights, 
+        x_pad_times_d_x = cp.tensordot(x_pad, self.d_x, axes=((1,), (0,)))
+        self.x_cache = cp.tensordot(x_pad_times_d_x, self.d_y, axes=((1,), (0,)))
+        self.z_cache = cp.tensordot(self.x_cache, self.weights, 
                                     axes=((1, 2, 4), (0, 1, 2))) + self.bias
 
         return self.ac_func(self.z_cache)
@@ -132,12 +131,12 @@ class Conv2DLayer:
         
         Parameters
         ----------
-        dloss_dy : np.array of floats, shape (nr_examples,) + self.output_size
+        dloss_dy : cp.array of floats, shape (nr_examples,) + self.output_size
             Derivative of the loss with respect to output values.
             
         Returns
         -------
-        dloss_dx : np.array of floats, shape (nr_examples,) + self.input_size
+        dloss_dx : cp.array of floats, shape (nr_examples,) + self.input_size
             Outputs.
         """
         
@@ -145,14 +144,14 @@ class Conv2DLayer:
         
         # Calculate derivatives.
         dloss_dz = self.ac_func_d(self.z_cache, dloss_dy)
-        self.dloss_dw = (1/nr_examples) * np.tensordot(self.x_cache, dloss_dz, 
+        self.dloss_dw = (1/nr_examples) * cp.tensordot(self.x_cache, dloss_dz, 
                                                        axes=((0, 3, 5), (0, 1, 2)))
-        d_y_times_filters = np.tensordot(self.d_y, self.weights, axes=((1,), (2,)))
-        dz_dx = np.tensordot(self.d_x, d_y_times_filters, axes=((1,), (3,)))
-        dloss_dx = np.tensordot(dloss_dz, dz_dx, axes=((1, 2, 3), (1, 3, 5)))
+        d_y_times_filters = cp.tensordot(self.d_y, self.weights, axes=((1,), (2,)))
+        dz_dx = cp.tensordot(self.d_x, d_y_times_filters, axes=((1,), (3,)))
+        dloss_dx = cp.tensordot(dloss_dz, dz_dx, axes=((1, 2, 3), (1, 3, 5)))
         dloss_dx = dloss_dx[:, self.padding[1][0]:self.padded_size[0] - self.padding[1][1],
                             self.padding[2][0]:self.padded_size[1] - self.padding[2][1], :]
-        self.dloss_db = np.average(self.dloss_dw, axis=(0, 1, 2))
+        self.dloss_db = cp.average(self.dloss_dw, axis=(0, 1, 2))
         
         # Return derivative of loss with respect to inputs x
         return dloss_dx
@@ -203,12 +202,12 @@ class MaxPool2DLayer:
 
         Parameters
         ----------
-        x : np.array of floats, shape (number of examples,) + self.input_size
+        x : cp.array of floats, shape (number of examples,) + self.input_size
             Input values.
 
         Returns
         -------
-        np.array of floats, shape (number of examples,) + self.output_size
+        cp.array of floats, shape (number of examples,) + self.output_size
            Output values.
         """
         
@@ -225,7 +224,7 @@ class MaxPool2DLayer:
         
         # Make mask of maximum values. Warning: this only works if maximum values are unique!
         # Maybe divide by some kind of count? Would that help?
-        self.i_cache = np.array(x_reshaped == y).reshape(x.shape).astype(int)
+        self.i_cache = cp.array(x_reshaped == y).reshape(x.shape).astype(int)
         
         # Reshape y to new dimensions.
         return y.reshape((nr_examples, m, n, nr_channels))
@@ -236,14 +235,14 @@ class MaxPool2DLayer:
 
         Parameters
         ----------
-        dloss_dy : np.array of floats, shape (number of examples,) + self.output_size
+        dloss_dy : cp.array of floats, shape (number of examples,) + self.output_size
             Derivative of loss with respect to output values.
         _ : placeholder
             Placeholder parameter for learning_rate.
             
         Returns
         -------
-        np.array of floats, shape (number of examples,) + self.input_size
+        cp.array of floats, shape (number of examples,) + self.input_size
             Derivative of loss with respect to input values.
         """
         
@@ -255,11 +254,11 @@ class MaxPool2DLayer:
         
         # Expand the derivative to the input shape.
         dloss_dy_reshaped = dloss_dy.reshape((nr_examples, m, 1, n, 1, nr_channels))
-        dloss_dy_expanded = np.multiply(dloss_dy_reshaped, np.ones((1, 1, p, 1, q, 1)))
+        dloss_dy_expanded = cp.multiply(dloss_dy_reshaped, cp.ones((1, 1, p, 1, q, 1), dtype=cp.int8))
         dloss_dy_expanded = dloss_dy_expanded.reshape((nr_examples, a, b, nr_channels))
         
         # Apply the cached mask to the derivative.
-        return np.multiply(dloss_dy_expanded, self.i_cache)
+        return cp.multiply(dloss_dy_expanded, self.i_cache)
         
     
 class FlattenLayer:
@@ -279,8 +278,7 @@ class FlattenLayer:
         # Save relevant attributes.
         self.input_size = input_size
         self.index = index
-        self.output_size = np.prod(input_size)
-        self.nr_flat = np.prod(input_size)
+        self.output_size = input_size[0] * input_size[1] * input_size[2]
         self.has_weights = False
 
     def forward_prop(self, x):
@@ -289,17 +287,17 @@ class FlattenLayer:
 
         Parameters
         ----------
-        x : np.array of floats, shape (number of examples,) + self.input_size
+        x : cp.array of floats, shape (number of examples,) + self.input_size
             Input values.
 
         Returns
         -------
-        y : np.array of floats, shape (number of examples, self.nr_flat)
+        y : cp.array of floats, shape (number of examples, self.output_size)
            Output values.
         """
         
         # Flatten x (except for first dimension) using reshape.
-        return np.reshape(x, newshape=(x.shape[0], self.nr_flat))
+        return cp.reshape(x, newshape=(x.shape[0], self.output_size))
 
     def back_prop(self, dloss_dy):
         """
@@ -307,17 +305,17 @@ class FlattenLayer:
 
         Parameters
         ----------
-        dloss_dy : np.array of floats, shape (number of examples, self.nr_flat)
+        dloss_dy : cp.array of floats, shape (number of examples, self.output_size)
             Derivative of loss with respect to output values.
             
         Returns
         -------
-        np.array of floats, shape (number of examples,) + self.input_size
+        cp.array of floats, shape (number of examples,) + self.input_size
             Derivative of loss with respect to input values.
         """
         
         # Reshape flattened array back to size of input array.
-        return np.reshape(dloss_dy, newshape=(dloss_dy.shape[0],) + self.input_size)
+        return cp.reshape(dloss_dy, newshape=(dloss_dy.shape[0],) + self.input_size)
     
     
 class DenseLayer:
@@ -356,10 +354,12 @@ class DenseLayer:
         """Initialize weights and bias."""
         
         # Can we optimize this initialization further?
-        stdev = np.sqrt(2) / np.sqrt(self.output_size)
-        # stdev = np.sqrt(2) / np.sqrt(self.nr_inputs * self.output_size)
-        self.weights = np.random.normal(loc=0., scale=stdev, size=(self.nr_inputs, self.output_size))
-        self.bias = np.zeros((1, self.output_size))
+        stdev = cp.sqrt(2) / cp.sqrt(self.output_size)
+        # stdev = cp.sqrt(2) / cp.sqrt(self.nr_inputs * self.output_size)
+        self.weights = cp.random.normal(loc=0., scale=stdev, 
+                                        size=(self.nr_inputs, self.output_size),
+                                        dtype=cp.float32)
+        self.bias = cp.zeros((1, self.output_size), dtype=cp.float32)
 
     def forward_prop(self, x):
         """
@@ -367,18 +367,18 @@ class DenseLayer:
 
         Parameters
         ----------
-        x : np.array of floats, shape (number of examples, number of input values)
+        x : cp.array of floats, shape (number of examples, number of input values)
             Input values.
 
         Returns
         -------
-        y : np.array of floats, shape (number of examples, number of nodes)
+        y : cp.array of floats, shape (number of examples, number of nodes)
            Output values.
         """
         
         # Store inputs and weighted inputs in cache.
         self.x_cache = x.copy()
-        self.z_cache = np.dot(self.x_cache, self.weights) + self.bias
+        self.z_cache = cp.dot(self.x_cache, self.weights) + self.bias
         
         # Apply activation function.
         y = self.ac_func(self.z_cache)
@@ -390,12 +390,12 @@ class DenseLayer:
 
         Parameters
         ----------
-        dloss_dy : np.array of floats, shape (number of examples, number of nodes)
+        dloss_dy : cp.array of floats, shape (number of examples, number of nodes)
             Derivative of loss with respect to output values.
             
         Returns
         -------
-        dloss_dx : np.array of floats, shape (number of examples, number of input values)
+        dloss_dx : cp.array of floats, shape (number of examples, number of input values)
             Derivative of loss with respect to input values.
         """
         
@@ -403,9 +403,9 @@ class DenseLayer:
         
         # Calculate derivatives.
         dloss_dz = self.ac_func_d(self.z_cache, dloss_dy)
-        self.dloss_dw = np.tensordot(self.x_cache, dloss_dz, axes=((0,), (0,))) / nr_examples
-        dloss_dx = np.tensordot(dloss_dz, self.weights, axes=((1,), (1,)))
-        self.dloss_db = np.sum(self.dloss_dw, axis=0, keepdims=True) / self.nr_inputs
+        self.dloss_dw = cp.tensordot(self.x_cache, dloss_dz, axes=((0,), (0,))) / nr_examples
+        dloss_dx = cp.tensordot(dloss_dz, self.weights, axes=((1,), (1,)))
+        self.dloss_db = cp.sum(self.dloss_dw, axis=0, keepdims=True) / self.nr_inputs
         
         # Return derivative of loss with respect to inputs x
         return dloss_dx
@@ -444,7 +444,7 @@ class NeuralNet:
         """
         
         # Process input.
-        np.random.seed(seed)
+        cp.random.seed(seed)
         self.input_size = input_size
         self.loss, self.loss_d = edonet.functions.loss.choose(loss)
         self.optimizer = edonet.functions.optimizer.choose(self, None)
@@ -463,7 +463,7 @@ class NeuralNet:
             
         # Make layers.
         self.layers = [make_layer(layers[0], input_size, 0)]
-        layer_indices = np.arange(len(layers))
+        layer_indices = [i for i in range(len(layers))]
         for i in layer_indices[1:]:
             self.layers.append(make_layer(layers[i], self.layers[i-1].output_size, i))
 
@@ -473,12 +473,12 @@ class NeuralNet:
 
         Parameters
         ----------
-        x : np.array of floats, shape (number of examples, number of features)
+        x : cp.array of floats, shape (number of examples, number of features)
             Input features.
 
         Returns
         -------
-        y : np.array of floats, shape (number of examples, number of classes)
+        y : cp.array of floats, shape (number of examples, number of classes)
             Classification probabilities.
         """
         
@@ -494,9 +494,9 @@ class NeuralNet:
 
         Parameters
         ----------
-        y_pred : np.array of floats, shape (number of examples, number of classes)
+        y_pred : cp.array of floats, shape (number of examples, number of classes)
             One-hot encoded predicted labels.
-        y_true : np.array of floats, shape (number of examples, number of classes)
+        y_true : cp.array of floats, shape (number of examples, number of classes)
             One-hot encoded true labels.
         learning_rate : float
             Learning rate for gradient descent.
@@ -517,9 +517,9 @@ class NeuralNet:
 
         Parameters
         ----------
-        x : np.array of floats, shape (number of examples, number of features)
+        x : cp.array of floats, shape (number of examples, number of features)
             Input features.
-        y_true : np.array of floats, shape (number of examples, number of classes)
+        y_true : cp.array of floats, shape (number of examples, number of classes)
             One-hot encoded labels.
         epochs : int, optional
             Number of epochs.
@@ -539,13 +539,13 @@ class NeuralNet:
         
         # Calculate number of batches.
         nr_examples = x.shape[0]
-        nr_batches = int(np.ceil(nr_examples / batch_size))
+        nr_batches = int(cp.ceil(nr_examples / batch_size))
             
         # Iterate over epochs.
         for epoch in range(epochs):
             
             print("Epoch: ", epoch)
-            avg_loss = np.zeros(nr_batches)
+            avg_loss = cp.zeros(nr_batches)
             
             # Iterate over batches.
             for i in range(nr_batches):
@@ -556,7 +556,7 @@ class NeuralNet:
                 y_pred = self.predict(x_batch)
                 
                 # Calculate average loss.
-                avg_loss[i] = np.average(self.loss(y_pred, y_batch))
+                avg_loss[i] = cp.average(self.loss(y_pred, y_batch))
                 
                 # Print status.
                 if verbose:
@@ -565,4 +565,4 @@ class NeuralNet:
                 # Backpropagation and gradient descent.
                 self.grad_desc(y_pred, y_batch, learning_rate)
                 
-            print("- Average loss: ", np.average(avg_loss))
+            print("- Average loss: ", cp.average(avg_loss))

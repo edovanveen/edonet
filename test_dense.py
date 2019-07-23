@@ -1,4 +1,5 @@
 import numpy as np
+import cupy as cp
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_moons
 from sklearn.model_selection import train_test_split
@@ -14,7 +15,9 @@ def make_dataset():
     x = scaler.transform(x)
     encoder = [[1, 0], [0, 1]]
     y = np.array([encoder[i] for i in y])
-    return train_test_split(x, y, random_state=0)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
+    return cp.array(x_train, dtype=cp.float32), cp.array(x_test, dtype=cp.float32), \
+           cp.array(y_train, dtype=cp.float32), cp.array(y_test, dtype=cp.float32)
 
 
 # Check accuracy.
@@ -35,8 +38,8 @@ def make_meshgrid(x, y, h=.02):
 
 # Plot decision boundary.
 def plot_contours(ax, model, xx, yy, **params):
-    z = model.predict(np.c_[xx.ravel(), yy.ravel()]).argmax(axis=1)
-    z = z.reshape(xx.shape)
+    z = model.predict(cp.c_[xx.ravel(), yy.ravel()]).argmax(axis=1)
+    z = cp.asnumpy(z).reshape(xx.shape)
     out = ax.contourf(xx, yy, z, **params)
     return out
     
@@ -65,11 +68,11 @@ def main():
                                      {'type': 'dense', 'nr_nodes': 2, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
-    model.fit(x_train, y_train, epochs=30, learning_rate=0.1, batch_size=100)
+    model.fit(x_train, y_train, epochs=10, learning_rate=0.01, batch_size=100, optimizer='Adam')
 
     # Show result on test set.
     print("accuracy: ", accuracy(y_test, model.predict(x_test)))
-    show_data_and_decision(model, x_test, y_test)    
+    show_data_and_decision(model, cp.asnumpy(x_test), cp.asnumpy(y_test))    
     
 
 if __name__ == "__main__":

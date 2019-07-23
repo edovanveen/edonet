@@ -1,8 +1,8 @@
 # edonet
-A minimal neural network, written in Python 3 using only the numpy library for speedy tensor operations.
+A minimal neural network, written in Python 3 using only the CuPy library for speedy tensor operations accelerated by CUDA.
 
 ## Requirements
-* numpy
+* CuPy
 
 ## Usage
 
