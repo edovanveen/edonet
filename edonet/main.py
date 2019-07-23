@@ -483,9 +483,42 @@ class NeuralNet:
         """
         
         # Push x through each layer using forward propagation.
-        y = x.copy()
-        for layer in self.layers:
+        y = self.layers[0].forward_prop(x)
+        for layer in self.layers[1:]:
             y = layer.forward_prop(y)
+        return y
+
+    def batch_predict(self, x, batch_size=100):
+        """
+        Predict labels y from input features x in batches.
+
+        Parameters
+        ----------
+        x : cp.array of floats, shape (number of examples, number of features)
+            Input features.
+        batch_size : int, optional
+            Batch size. Default: 100.
+
+        Returns
+        -------
+        y : cp.array of floats, shape (number of examples, number of classes)
+            Classification probabilities.
+        """
+        
+        # Calculate number of batches.
+        nr_examples = x.shape[0]
+        nr_batches = int(-(-(nr_examples / batch_size)))
+        
+        # Push x through each layer using forward propagation.
+        y = cp.zeros(nr_examples, dtype=cp.int16)
+        for layer in self.layers:
+            # Iterate over batches.
+            for i in range(nr_batches):
+                
+                # Forward propagation.
+                x_batch = x[i*batch_size:min(nr_examples, (i+1)*batch_size):, :]
+                y[i*batch_size:min(nr_examples, (i+1)*batch_size):, :] = self.predict(x_batch)
+                
         return y
 
     def grad_desc(self, y_pred, y_true, learning_rate):
@@ -539,7 +572,7 @@ class NeuralNet:
         
         # Calculate number of batches.
         nr_examples = x.shape[0]
-        nr_batches = int(cp.ceil(nr_examples / batch_size))
+        nr_batches = int(-(-(nr_examples / batch_size)))
             
         # Iterate over epochs.
         for epoch in range(epochs):

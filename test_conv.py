@@ -14,7 +14,7 @@ def make_dataset():
     encoder = np.eye(10, dtype=np.int8)
     y_train = [encoder[i] for i in y_train]
     y_test = [encoder[i] for i in y_test]
-    return cp.array(x_train[::4]), cp.array(x_test[::500]), cp.array(y_train[::4]), cp.array(y_test[::500])
+    return cp.array(x_train), cp.array(x_test), cp.array(y_train), cp.array(y_test)
 
 
 # Check accuracy.
@@ -52,13 +52,13 @@ def main():
                              seed=0)
 
     # Train model with decreasing learning rate.
-    model.fit(x_train, y_train, epochs=1, learning_rate=0.001, batch_size=200, optimizer='Adam', verbose=True)
+    model.fit(x_train, y_train, epochs=8, learning_rate=0.001, batch_size=200, optimizer='Adam', verbose=True)
 
     # Show result on test set.
     print("test labels:")
     print(y_test.argmax(axis=1))
     print("pred labels:")
-    print(model.predict(x_test).argmax(axis=1))
+    print(model.batch_predict(x_test, batch_size=200).argmax(axis=1))
     print("accuracy: ", accuracy(y_test, model.predict(x_test))) 
 
 

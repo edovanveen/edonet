@@ -25,30 +25,30 @@ model = edonet.NeuralNet(input_size=(32, 32, 3),
                          seed=0)
                          
 # Fit the model to the training data, using 5 iterations.
-model.fit(x_train, y_train, epochs=5)
+model.fit(x_train, y_train, epochs=5, optimizer='Adam')
 
 # Do a prediction using the test set.
 y_pred = model.predict(x_test)
 ```
 
 Example files:
-* To run an example of a densely connected neural network, use `test_dense.py`. For dataset generation and visualisation in `test_dense.py` you will need matplotlib and sklearn.
-* To run an example of a convolutional neural network, use `test_conv.py`. For dataset generation you will need tensorflow.
+* To run an example of a densely connected neural network, use `test_dense.py`. For dataset generation and visualisation in `test_dense.py` you will need numpy, matplotlib and sklearn.
+* To run an example of a convolutional neural network, use `test_conv.py`. For dataset generation you will need numpy and tensorflow.
 
 ## To do
 
-* Figure out good weight initialization to prevent diminishing/exploding gradients - 
-  initialization should depend on activation function
-  ([link1](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf), [link2](https://arxiv.org/pdf/1502.01852.pdf));
+* Research: can we further speed up the CuPy operations?
+* Weight initialization should depend on activation function
+  ([link1](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf), [link2](https://arxiv.org/pdf/1502.01852.pdf)) 
+  (now we always use relu-optimized weight initialization);
 * Double check all backprop tensor equations, do 
   [gradient checking](http://cs231n.github.io/neural-networks-3/?source=post_page---------------------------#gradcheck)
   (already done for conv2d layer);
-* Rethink NeuralNet layers argument, dict currently a bit clunky;
+* Rethink NeuralNet layers argument type, dict currently a bit clunky;
 * Implement mini-batch (so as to not get a MemoryError) NeuralNet.predict() and NeuralNet.evaluate();
 * Add NeuralNet.save() and NeuralNet.load() functionalities for saving weights and structure;
 * Add NeuralNet.describe() functionality that shows all layers and sizes.
 * Add more activation and loss functions, as well as optimizers;
-* Rescale inputs automatically?
 
 ## Issues
 

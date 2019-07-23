@@ -116,8 +116,8 @@ def softmax_d(z, dloss_dy):
     
     # Prepare.
     y = softmax(z)
-    eye = cp.eye(y.shape[1])
-    dloss_dz = cp.zeros(y.shape)
+    eye = cp.eye(y.shape[1], dtype=cp.int8)
+    dloss_dz = cp.zeros(y.shape, dtype=cp.float32)
     
     # Iterate over training examples.
     for n in range(y.shape[0]):
