@@ -52,14 +52,15 @@ def main():
                              seed=0)
 
     # Train model with decreasing learning rate.
-    model.fit(x_train, y_train, epochs=8, learning_rate=0.001, batch_size=200, optimizer='Adam', verbose=True)
+    model.fit(x_train, y_train, epochs=1, learning_rate=0.001, batch_size=200, optimizer='Adam', verbose=True)
 
     # Show result on test set.
     print("test labels:")
     print(y_test.argmax(axis=1))
     print("pred labels:")
-    print(model.batch_predict(x_test, batch_size=200).argmax(axis=1))
-    print("accuracy: ", accuracy(y_test, model.predict(x_test))) 
+    y_pred = model.batch_predict(x_test, batch_size=200)
+    print(y_pred.argmax(axis=1))
+    print("accuracy: ", accuracy(y_test, y_pred))
 
 
 if __name__ == "__main__":

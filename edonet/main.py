@@ -507,17 +507,17 @@ class NeuralNet:
         
         # Calculate number of batches.
         nr_examples = x.shape[0]
-        nr_batches = int(-(-(nr_examples / batch_size)))
+        nr_batches = int(-(-nr_examples // batch_size))
         
         # Push x through each layer using forward propagation.
-        y = cp.zeros(nr_examples, dtype=cp.int16)
+        y = cp.zeros((nr_examples, self.layers[-1].output_size), dtype=cp.float32)
         for layer in self.layers:
             # Iterate over batches.
             for i in range(nr_batches):
-                
-                # Forward propagation.
-                x_batch = x[i*batch_size:min(nr_examples, (i+1)*batch_size):, :]
-                y[i*batch_size:min(nr_examples, (i+1)*batch_size):, :] = self.predict(x_batch)
+                i_start = i*batch_size
+                i_end = min(nr_examples, (i+1)*batch_size)
+                x_batch = x[i_start:i_end, :]
+                y[i_start:i_end, :] = self.predict(x_batch)
                 
         return y
 
@@ -572,7 +572,7 @@ class NeuralNet:
         
         # Calculate number of batches.
         nr_examples = x.shape[0]
-        nr_batches = int(-(-(nr_examples / batch_size)))
+        nr_batches = int(-(-nr_examples // batch_size))
             
         # Iterate over epochs.
         for epoch in range(epochs):
