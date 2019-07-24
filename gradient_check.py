@@ -13,13 +13,13 @@ def main():
     
     # Make and train model.
     model = edonet.NeuralNet(input_size=(2, 2, 2),
-                             layers=({'type': 'conv2D', 'nr_filters': 2, 'filter_size': (3, 3),
+                             layers=({'type': 'Conv2D', 'nr_filters': 2, 'filter_size': (3, 3),
                                       'activation': 'relu', 'stride': (1, 1), 'padding': 'same'},
-                                     {'type': 'maxpool', 'pool_size': (2, 2)},
-                                     {'type': 'flatten'},
-                                     {'type': 'dense', 'nr_nodes': 4, 'activation': 'relu'},
-                                     {'type': 'dense', 'nr_nodes': 4, 'activation': 'tanh'},
-                                     {'type': 'dense', 'nr_nodes': 2, 'activation': 'softmax'}),
+                                     {'type': 'MaxPool2D', 'pool_size': (2, 2)},
+                                     {'type': 'Flatten'},
+                                     {'type': 'Dense', 'nr_nodes': 4, 'activation': 'relu'},
+                                     {'type': 'Dense', 'nr_nodes': 4, 'activation': 'tanh'},
+                                     {'type': 'Dense', 'nr_nodes': 2, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)     
     
@@ -32,7 +32,7 @@ def main():
         dloss_dx = layer.back_prop(dloss_dx)
 
     # Check derivatives of loss wrt inputs x.
-    epsilon = 1e-3
+    epsilon = 1e-4
     dloss_dx_check = np.zeros(dloss_dx.shape)
     for i in range(2):
         for j in range(2):

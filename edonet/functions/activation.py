@@ -77,6 +77,44 @@ def tanh_d(z, dloss_dy):
     dy_dz = 1 - cp.square(cp.tanh(z))
     return cp.multiply(dloss_dy, dy_dz)
 
+    
+def sigmoid(z):
+    """
+    Perform sigmoid activation function.
+
+    Parameters
+    ----------
+    z : cp.array of floats, shape (number of examples,) + (layer shape)
+        Input values.
+
+    Returns
+    -------
+    cp.array of floats, shape (number of examples,) + 2 * (layer shape)
+       Output values.
+    """
+    return 1 / (1 + cp.exp(-z))
+    
+    
+def sigmoid_d(z, dloss_dy):
+    """
+    Derivatives with respect to inputs of sigmoid function.
+    
+    Parameters
+    ----------
+    z : cp.array of floats, shape (number of examples,) + (layer shape)
+        z-cache.
+    dloss_dy : cp.array of floats, shape (number of examples,) + (layer shape)
+        Derivatives of loss with respect to outputs of sigmoid function.
+    
+    Returns
+    -------
+    cp.array of floats, shape (number of examples,) + 2 * (layer shape)
+        Derivatives of loss with respect to inputs of sigmoid function.
+    """
+
+    dy_dz = sigmoid(z) * (1 - sigmoid(z))
+    return cp.multiply(dloss_dy, dy_dz)
+    
 
 def softmax(z):
     """
@@ -110,7 +148,7 @@ def softmax_d(z, dloss_dy):
     
     Returns
     -------
-    dloss_dz : cp.array of floats, shape (number of examples, number of nodes, number of nodes)
+    dloss_dz : cp.array of floats, shape (number of examples, number of nodes)
         Derivatives of loss with respect to inputs of softmax function.
     """
     
@@ -152,6 +190,9 @@ def choose(activation):
     elif activation == 'tanh':
         ac_func = tanh
         ac_func_d = tanh_d
+    elif activation == 'sigmoid':
+        ac_func = sigmoid
+        ac_func_d = sigmoid_d
     elif activation == 'softmax':
         ac_func = softmax
         ac_func_d = softmax_d

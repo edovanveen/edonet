@@ -2,6 +2,68 @@ import cupy as cp
 import edonet.functions
 
 
+class DropoutLayer:
+
+    def __init__(self, input_size, index, dropout_rate):
+        """
+        Initialize a dropout layer.
+        
+        Parameters
+        ----------
+        input_size : 3-tuple of ints
+            Size of the input, e.g. (256, 256, 3) for a 256 by 256 rgb image.
+        index : int
+            Layer index (for identification).
+        dropout_rate : float
+            Dropout rate.
+        """
+    
+        # Set attributes.
+        self.input_size = input_size
+        self.index = index
+        self.dropout_rate = dropout_rate
+        self.output_size = input_size
+        self.i_cache = None
+        self.has_weights = False
+        self.layer_type = 'Dropout'
+        
+    def forward_prop(self, x):
+        """
+        Do forward propagation through the layer, saving a dropout mask to cache.
+
+        Parameters
+        ----------
+        x : cp.array of floats, shape (number of examples,) + self.input_size
+            Input values.
+
+        Returns
+        -------
+        cp.array of floats, shape (number of examples,) + self.output_size
+           Output values.
+        """
+    
+        # Make random dropout mask.
+        self.i_cache = cp.random.choice([0, 1], size=(1, self.input_size), 
+                                        p=[self.dropout_rate, 1 - self.dropout_rate])
+        return cp.multiply(x, self.i_cache)
+    
+    def back_prop(self, dloss_dy):
+        """
+        Do backward propagation through the layer.
+
+        Parameters
+        ----------
+        dloss_dy : cp.array of floats, shape (number of examples, self.output_size)
+            Derivative of loss with respect to output values.
+            
+        Returns
+        -------
+        cp.array of floats, shape (number of examples, self.input_size)
+            Derivative of loss with respect to input values.
+        """
+
+        return cp.multiply(dloss_dy, self.i_cache)
+
 class Conv2DLayer:
 
     def __init__(self, input_size, index, nr_filters, filter_size, activation, stride=(1, 1), padding='valid'):
@@ -40,6 +102,7 @@ class Conv2DLayer:
         self.dloss_dw = None
         self.dloss_db = None
         self.has_weights = True
+        self.layer_type = 'Conv2D'
         self.init_weights()
         
         # Take care of padding.
@@ -195,6 +258,7 @@ class MaxPool2DLayer:
                             self.input_size[1] // self.pool_size[1],
                             self.input_size[2])
         self.has_weights = False
+        self.layer_type = 'MaxPool2D'
 
     def forward_prop(self, x):
         """
@@ -237,8 +301,6 @@ class MaxPool2DLayer:
         ----------
         dloss_dy : cp.array of floats, shape (number of examples,) + self.output_size
             Derivative of loss with respect to output values.
-        _ : placeholder
-            Placeholder parameter for learning_rate.
             
         Returns
         -------
@@ -280,6 +342,7 @@ class FlattenLayer:
         self.index = index
         self.output_size = input_size[0] * input_size[1] * input_size[2]
         self.has_weights = False
+        self.layer_type = 'Flatten'
 
     def forward_prop(self, x):
         """
@@ -348,6 +411,7 @@ class DenseLayer:
         self.dloss_dw = None
         self.dloss_db = None
         self.has_weights = True
+        self.layer_type = 'Dense'
         self.init_weights()
             
     def init_weights(self):
@@ -377,7 +441,7 @@ class DenseLayer:
         """
         
         # Store inputs and weighted inputs in cache.
-        self.x_cache = x.copy()
+        self.x_cache = x
         self.z_cache = cp.dot(self.x_cache, self.weights) + self.bias
         
         # Apply activation function.
@@ -451,15 +515,17 @@ class NeuralNet:
         
         # Helper function for layer creation.
         def make_layer(layer, inputs, index):
-            if layer['type'] == 'conv2D':
+            if layer['type'] == 'Conv2D':
                 return Conv2DLayer(inputs, index, layer['nr_filters'], layer['filter_size'], 
                                    layer['activation'], layer['stride'], layer['padding'])
-            if layer['type'] == 'maxpool':
+            if layer['type'] == 'MaxPool2D':
                 return MaxPool2DLayer(inputs, index, layer['pool_size'])
-            if layer['type'] == 'flatten':
+            if layer['type'] == 'Flatten':
                 return FlattenLayer(inputs, index)
-            if layer['type'] == 'dense':
+            if layer['type'] == 'Dense':
                 return DenseLayer(inputs, index, layer['nr_nodes'], layer['activation'])
+            if layer['type'] == 'Dropout':
+                return DropoutLayer(inputs, index, layer['dropout_rate'])
             
         # Make layers.
         self.layers = [make_layer(layers[0], input_size, 0)]

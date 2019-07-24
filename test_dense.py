@@ -62,10 +62,10 @@ def main():
     
     # Make and train model.
     model = edonet.NeuralNet(input_size=2,
-                             layers=({'type': 'dense', 'nr_nodes': 8, 'activation': 'relu'},
-                                     {'type': 'dense', 'nr_nodes': 8, 'activation': 'tanh'},
-                                     {'type': 'dense', 'nr_nodes': 8, 'activation': 'relu'},
-                                     {'type': 'dense', 'nr_nodes': 2, 'activation': 'softmax'}),
+                             layers=({'type': 'Dense', 'nr_nodes': 8, 'activation': 'relu'},
+                                     {'type': 'Dense', 'nr_nodes': 8, 'activation': 'tanh'},
+                                     {'type': 'Dense', 'nr_nodes': 8, 'activation': 'sigmoid'},
+                                     {'type': 'Dense', 'nr_nodes': 2, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
     model.fit(x_train, y_train, epochs=10, learning_rate=0.01, batch_size=100, optimizer='Adam')

@@ -39,21 +39,28 @@ def main():
     
     # Make model.
     model = edonet.NeuralNet(input_size=(28, 28, 1),
-                             layers=({'type': 'conv2D', 'nr_filters': 64, 'filter_size': (3, 3),
+                             layers=({'type': 'Conv2D', 'nr_filters': 64, 'filter_size': (3, 3),
                                       'activation': 'relu', 'stride': (1, 1), 'padding': 'same'},
-                                     {'type': 'maxpool', 'pool_size': (2, 2)},
-                                     {'type': 'conv2D', 'nr_filters': 32, 'filter_size': (3, 3),
+                                     {'type': 'MaxPool2D', 'pool_size': (2, 2)},
+                                     {'type': 'Conv2D', 'nr_filters': 32, 'filter_size': (3, 3),
                                       'activation': 'relu', 'stride': (1, 1), 'padding': 'valid'},
-                                     {'type': 'maxpool', 'pool_size': (2, 2)},
-                                     {'type': 'flatten'},
-                                     {'type': 'dense', 'nr_nodes': 32, 'activation': 'relu'},
-                                     {'type': 'dense', 'nr_nodes': 10, 'activation': 'softmax'}),
+                                     {'type': 'MaxPool2D', 'pool_size': (2, 2)},
+                                     {'type': 'Flatten'},
+                                     {'type': 'Dropout', 'dropout_rate': 0.1},
+                                     {'type': 'Dense', 'nr_nodes': 32, 'activation': 'relu'},
+                                     {'type': 'Dropout', 'dropout_rate': 0.1},
+                                     {'type': 'Dense', 'nr_nodes': 10, 'activation': 'softmax'}),
                              loss='CEL',
                              seed=0)
 
-    # Train model with decreasing learning rate.
-    model.fit(x_train, y_train, epochs=1, learning_rate=0.001, batch_size=200, optimizer='Adam', verbose=True)
-
+    # Train model with Adam optimizer.
+    model.fit(x_train, y_train, epochs=5, learning_rate=0.001, 
+              batch_size=100, optimizer='Adam', verbose=True)
+    
+    # After training, set dropout rates to 0.
+    model.layers[5].dropout_rate = 0
+    model.layers[7].dropout_rate = 0
+    
     # Show result on test set.
     print("test labels:")
     print(y_test.argmax(axis=1))
