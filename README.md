@@ -45,7 +45,9 @@ Example files:
   [gradient checking](http://cs231n.github.io/neural-networks-3/?source=post_page---------------------------#gradcheck)
   (already done for conv2d layer);
 * Rethink NeuralNet layers argument type, dict currently a bit clunky;
-* Implement mini-batch (so as to not get a MemoryError) NeuralNet.predict() and NeuralNet.evaluate();
+* Implement NeuralNet.evaluate();
+* Implement DropoutLayer;
+* Implement BatchNormLayer;
 * Add NeuralNet.save() and NeuralNet.load() functionalities for saving weights and structure;
 * Add NeuralNet.describe() functionality that shows all layers and sizes;
 * Add more activation and loss functions, as well as optimizers.
