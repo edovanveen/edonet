@@ -1,4 +1,4 @@
-import cupy as cp
+import numpy as np
 import warnings
 
 
@@ -55,10 +55,10 @@ class AdamOptimizer:
         for layer in model.layers:
             if layer.has_weights:
                 self.time[layer.index] = 0
-                self.moments1_w[layer.index] = cp.zeros(layer.weights.shape, dtype=cp.float32)
-                self.moments2_w[layer.index] = cp.zeros(layer.weights.shape, dtype=cp.float32)
-                self.moments1_b[layer.index] = cp.zeros(layer.bias.shape, dtype=cp.float32)
-                self.moments2_b[layer.index] = cp.zeros(layer.bias.shape, dtype=cp.float32)
+                self.moments1_w[layer.index] = np.zeros(layer.weights.shape, dtype=np.float32)
+                self.moments2_w[layer.index] = np.zeros(layer.weights.shape, dtype=np.float32)
+                self.moments1_b[layer.index] = np.zeros(layer.bias.shape, dtype=np.float32)
+                self.moments2_b[layer.index] = np.zeros(layer.bias.shape, dtype=np.float32)
     
     def update(self, layer, learning_rate):
         """
@@ -82,19 +82,19 @@ class AdamOptimizer:
         self.moments1_b[index] = self.beta1 * self.moments1_b[index] + \
                                  (1 - self.beta1) * layer.dloss_db
         self.moments2_w[index] = self.beta2 * self.moments2_w[index] + \
-                                 (1 - self.beta2) * cp.power(layer.dloss_dw, 2)
+                                 (1 - self.beta2) * np.power(layer.dloss_dw, 2)
         self.moments2_b[index] = self.beta2 * self.moments2_b[index] + \
-                                 (1 - self.beta2) * cp.power(layer.dloss_db, 2)
+                                 (1 - self.beta2) * np.power(layer.dloss_db, 2)
         update1_w = self.moments1_w[index] / (1 - self.beta1 ** self.time[index])
         update1_b = self.moments1_b[index] / (1 - self.beta1 ** self.time[index])
-        update2_w = cp.sqrt(self.moments2_w[index] / (1 - self.beta2 ** self.time[index])) + \
+        update2_w = np.sqrt(self.moments2_w[index] / (1 - self.beta2 ** self.time[index])) + \
                     self.epsilon
-        update2_b = cp.sqrt(self.moments2_b[index] / (1 - self.beta2 ** self.time[index])) + \
+        update2_b = np.sqrt(self.moments2_b[index] / (1 - self.beta2 ** self.time[index])) + \
                     self.epsilon
                     
         # Set layer weights.
-        layer.weights = layer.weights - learning_rate * cp.divide(update1_w, update2_w)
-        layer.bias = layer.bias - learning_rate * cp.divide(update1_b, update2_b)
+        layer.weights = layer.weights - learning_rate * np.divide(update1_w, update2_w)
+        layer.bias = layer.bias - learning_rate * np.divide(update1_b, update2_b)
         
 
 def choose(model, optimizer):

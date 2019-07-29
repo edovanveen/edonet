@@ -1,5 +1,4 @@
 import numpy as np
-import cupy as cp
 import edonet
 
 
@@ -8,8 +7,8 @@ def main():
     
     # Make input data.
     np.random.seed(0)
-    x = cp.array(np.random.rand(1, 2, 2, 2))
-    y = cp.array([[0, 1]])
+    x = np.array(np.random.rand(1, 2, 2, 2))
+    y = np.array([[0, 1]])
     
     # Make and train model.
     model = edonet.NeuralNet(input_size=(2, 2, 2),

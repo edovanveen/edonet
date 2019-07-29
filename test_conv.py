@@ -1,4 +1,3 @@
-import cupy as cp
 import numpy as np
 import tensorflow as tf
 import edonet
@@ -14,26 +13,67 @@ def make_dataset():
     encoder = np.eye(10, dtype=np.int8)
     y_train = [encoder[i] for i in y_train]
     y_test = [encoder[i] for i in y_test]
-    return cp.array(x_train), cp.array(x_test), cp.array(y_train), cp.array(y_test)
+    return np.array(x_train), np.array(x_test), np.array(y_train), np.array(y_test)
 
 
 # Check accuracy.
 def accuracy(y_true, y_pred):
     labels_true = y_true.argmax(axis=1)
     labels_pred = y_pred.argmax(axis=1)
-    n_good = cp.sum(labels_true - labels_pred == 0)
+    n_good = np.sum(labels_true - labels_pred == 0)
     return n_good / len(y_true)
 
 
 # Make and test model.
 def main():
+
+    np.random.seed(1)
+    x = np.random.rand(1, 28, 28, 1)
     
-    # Set memory pool.
-    memory_pool = cp.cuda.MemoryPool()
-    cp.cuda.set_allocator(memory_pool.malloc)
-    pinned_memory_pool = cp.cuda.PinnedMemoryPool()
-    cp.cuda.set_pinned_memory_allocator(pinned_memory_pool.malloc)
+    conv2d = edonet.Conv2DLayer(input_size=(28, 28, 1), index=0, nr_filters=1, 
+                                filter_size=(5, 5), activation='relu', stride=(1, 1), padding='same')
     
+    import time
+    from scipy.signal import convolve2d
+    
+    t0 = time.time()
+    for i in range(1000):
+        f = conv2d.forward_prop(x)[0, :, :, 0]
+    t1 = time.time()
+    # print(f)
+    print((t1 - t0))
+    
+    t0 = time.time()
+    for i in range(1000):
+        f = convolve2d(x[0, :, :, 0], conv2d.weights[0, ::-1, ::-1, 0], mode='same') + conv2d.bias[0, ::-1, ::-1, 0]
+    t1 = time.time()
+    # print(f)
+    print((t1 - t0))
+    
+    t0 = time.time()
+    for i in range(1000):
+        f = conv2d.back_prop(x)[0, :, :, 0]
+    t1 = time.time()
+    # print(f)
+    # print(conv2d.dloss_dw[0, :, :, 0])
+    dloss_dz = conv2d.ac_func_d(conv2d.z_cache, x)[0, :, :, 0]
+    print((t1 - t0))
+    
+    t0 = time.time()
+    for i in range(1000):
+        f = convolve2d(conv2d.weights[0, :, :, 0], dloss_dz, mode='full')
+    t1 = time.time()
+    # print(f[1:-1, 1:-1])
+    print((t1 - t0))
+    
+    t0 = time.time()
+    for i in range(1000):
+        f = convolve2d(dloss_dz[::-1, ::-1], x[0, :, :, 0], mode='same')
+    t1 = time.time()
+    # print(f[1:-1, 1:-1])
+    print((t1 - t0))
+    
+    """
     # Make dataset.
     x_train, x_test, y_train, y_test = make_dataset()
     
@@ -68,6 +108,7 @@ def main():
     y_pred = model.batch_predict(x_test, batch_size=200)
     print(y_pred.argmax(axis=1))
     print("accuracy: ", accuracy(y_test, y_pred))
+    """
 
 
 if __name__ == "__main__":

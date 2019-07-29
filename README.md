@@ -1,8 +1,9 @@
 # edonet
-A minimal neural network, written in Python 3 using only the CuPy library for speedy tensor operations accelerated by CUDA.
+A minimal neural network, written in Python 3 using only the numpy and scipy libraries.
 
 ## Requirements
-* CuPy
+* numpy
+* scipy
 
 ## Usage
 
@@ -37,10 +38,6 @@ Example files:
 
 ## To do
 
-* Research: can we further speed up the CuPy operations? When using convolutions, 
-  the GPU seems to be using 'copy' for parts of the backprop computation.
-  Maybe write a nice user-defined kernel for calculating dloss_dx?
-  Or use FFT convolution? Or use chainer.functions.convolution_2d?
 * Weight initialization should depend on activation function
   ([link1](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf), [link2](https://arxiv.org/pdf/1502.01852.pdf)) 
   (now we always use relu-optimized weight initialization).

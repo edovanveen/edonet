@@ -1,4 +1,4 @@
-import cupy as cp
+import numpy as np
 import warnings
 
 
@@ -8,15 +8,15 @@ def relu(z):
 
     Parameters
     ----------
-    z : cp.array of floats, shape (number of examples,) + (layer shape)
+    z : np.array of floats, shape (number of examples,) + (layer shape)
         Input values.
 
     Returns
     -------
-    cp.array of floats, shape (number of examples,) + (layer shape)
+    np.array of floats, shape (number of examples,) + (layer shape)
        Output values.
     """
-    return cp.maximum(z, 0)
+    return np.maximum(z, 0)
 
 
 def relu_d(z, dloss_dy):
@@ -25,19 +25,19 @@ def relu_d(z, dloss_dy):
     
     Parameters
     ----------
-    z : cp.array of floats, shape (number of examples,) + (layer shape)
+    z : np.array of floats, shape (number of examples,) + (layer shape)
         z-cache.
-    dloss_dy : cp.array of floats, shape (number of examples,) + (layer shape)
+    dloss_dy : np.array of floats, shape (number of examples,) + (layer shape)
         Derivatives of loss with respect to outputs of relu function.
     
     Returns
     -------
-    cp.array of floats, shape (number of examples,) + (layer shape)
+    np.array of floats, shape (number of examples,) + (layer shape)
         Derivatives of loss with respect to inputs of relu function.
     """
     
     dy_dz = z > 0
-    return cp.multiply(dloss_dy, dy_dz)
+    return np.multiply(dloss_dy, dy_dz)
 
 
 def tanh(z):
@@ -46,15 +46,15 @@ def tanh(z):
 
     Parameters
     ----------
-    z : cp.array of floats, shape (number of examples,) + (layer shape)
+    z : np.array of floats, shape (number of examples,) + (layer shape)
         Input values.
 
     Returns
     -------
-    cp.array of floats, shape (number of examples,) + 2 * (layer shape)
+    np.array of floats, shape (number of examples,) + 2 * (layer shape)
        Output values.
     """
-    return cp.tanh(z)
+    return np.tanh(z)
 
 
 def tanh_d(z, dloss_dy):
@@ -63,19 +63,19 @@ def tanh_d(z, dloss_dy):
     
     Parameters
     ----------
-    z : cp.array of floats, shape (number of examples,) + (layer shape)
+    z : np.array of floats, shape (number of examples,) + (layer shape)
         z-cache.
-    dloss_dy : cp.array of floats, shape (number of examples,) + (layer shape)
+    dloss_dy : np.array of floats, shape (number of examples,) + (layer shape)
         Derivatives of loss with respect to outputs of tanh function.
     
     Returns
     -------
-    cp.array of floats, shape (number of examples,) + 2 * (layer shape)
+    np.array of floats, shape (number of examples,) + 2 * (layer shape)
         Derivatives of loss with respect to inputs of tanh function.
     """
     
-    dy_dz = 1 - cp.square(cp.tanh(z))
-    return cp.multiply(dloss_dy, dy_dz)
+    dy_dz = 1 - np.square(np.tanh(z))
+    return np.multiply(dloss_dy, dy_dz)
 
     
 def sigmoid(z):
@@ -84,15 +84,15 @@ def sigmoid(z):
 
     Parameters
     ----------
-    z : cp.array of floats, shape (number of examples,) + (layer shape)
+    z : np.array of floats, shape (number of examples,) + (layer shape)
         Input values.
 
     Returns
     -------
-    cp.array of floats, shape (number of examples,) + 2 * (layer shape)
+    np.array of floats, shape (number of examples,) + 2 * (layer shape)
        Output values.
     """
-    return 1 / (1 + cp.exp(-z))
+    return 1 / (1 + np.exp(-z))
     
     
 def sigmoid_d(z, dloss_dy):
@@ -101,19 +101,19 @@ def sigmoid_d(z, dloss_dy):
     
     Parameters
     ----------
-    z : cp.array of floats, shape (number of examples,) + (layer shape)
+    z : np.array of floats, shape (number of examples,) + (layer shape)
         z-cache.
-    dloss_dy : cp.array of floats, shape (number of examples,) + (layer shape)
+    dloss_dy : np.array of floats, shape (number of examples,) + (layer shape)
         Derivatives of loss with respect to outputs of sigmoid function.
     
     Returns
     -------
-    cp.array of floats, shape (number of examples,) + 2 * (layer shape)
+    np.array of floats, shape (number of examples,) + 2 * (layer shape)
         Derivatives of loss with respect to inputs of sigmoid function.
     """
 
     dy_dz = sigmoid(z) * (1 - sigmoid(z))
-    return cp.multiply(dloss_dy, dy_dz)
+    return np.multiply(dloss_dy, dy_dz)
     
 
 def softmax(z):
@@ -122,17 +122,17 @@ def softmax(z):
 
     Parameters
     ----------
-    z : cp.array of floats, shape (number of examples, number of nodes)
+    z : np.array of floats, shape (number of examples, number of nodes)
         Input values.
 
     Returns
     -------
-    cp.array of floats, shape (number of examples, number of nodes)
+    np.array of floats, shape (number of examples, number of nodes)
        Output values.
     """
     
-    expz = cp.exp(z)
-    return cp.divide(expz, cp.sum(expz, axis=1, keepdims=True))
+    expz = np.exp(z)
+    return np.divide(expz, np.sum(expz, axis=1, keepdims=True))
 
 
 def softmax_d(z, dloss_dy):
@@ -141,28 +141,28 @@ def softmax_d(z, dloss_dy):
     
     Parameters
     ----------
-    z : cp.array of floats, shape (number of examples, number of nodes)
+    z : np.array of floats, shape (number of examples, number of nodes)
         z-cache.
-    dloss_dy : cp.array of floats, shape (number of examples, number of nodes)
+    dloss_dy : np.array of floats, shape (number of examples, number of nodes)
         Derivatives of loss with respect to outputs of relu function.
     
     Returns
     -------
-    dloss_dz : cp.array of floats, shape (number of examples, number of nodes)
+    dloss_dz : np.array of floats, shape (number of examples, number of nodes)
         Derivatives of loss with respect to inputs of softmax function.
     """
     
     # Prepare.
     y = softmax(z)
-    eye = cp.eye(y.shape[1], dtype=cp.int8)
-    dloss_dz = cp.zeros(y.shape, dtype=cp.float32)
+    eye = np.eye(y.shape[1], dtype=np.int8)
+    dloss_dz = np.zeros(y.shape, dtype=np.float32)
     
     # Iterate over training examples.
     for n in range(y.shape[0]):
-        y_tdot_y = -1 * cp.tensordot(y[n], y[n], axes=0)
-        y_d_kron = cp.multiply(y[n].reshape(y.shape[1], 1), eye)
-        dy_dz = cp.add(y_tdot_y, y_d_kron)
-        dloss_dz[n] = cp.tensordot(dloss_dy[n], dy_dz, axes=1)
+        y_tdot_y = -1 * np.tensordot(y[n], y[n], axes=0)
+        y_d_kron = np.multiply(y[n].reshape(y.shape[1], 1), eye)
+        dy_dz = np.add(y_tdot_y, y_d_kron)
+        dloss_dz[n] = np.tensordot(dloss_dy[n], dy_dz, axes=1)
         
     return dloss_dz
 
