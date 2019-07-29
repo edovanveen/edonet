@@ -38,6 +38,7 @@ Example files:
 
 ## To do
 
+* No need to calculate dloss_dx for layer with index 0.
 * Weight initialization should depend on activation function
   ([link1](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf), [link2](https://arxiv.org/pdf/1502.01852.pdf)) 
   (now we always use relu-optimized weight initialization).

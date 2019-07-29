@@ -28,30 +28,25 @@ def accuracy(y_true, y_pred):
 def main():
 
     np.random.seed(1)
-    x = np.random.rand(1, 28, 28, 1)
+    x = np.random.rand(1, 128, 128, 1)
     
-    conv2d = edonet.Conv2DLayer(input_size=(28, 28, 1), index=0, nr_filters=1, 
-                                filter_size=(5, 5), activation='relu', stride=(1, 1), padding='same')
+    conv2d = edonet.Conv2DLayer(input_size=(128, 128, 1), index=0, nr_filters=1, 
+                                filter_size=(3, 3), activation='relu', stride=(1, 1), padding='same')
     
     import time
-    from scipy.signal import convolve2d
+    from scipy.signal import convolve, convolve2d
+    
+    print("---tensordot")
     
     t0 = time.time()
-    for i in range(1000):
+    for i in range(10):
         f = conv2d.forward_prop(x)[0, :, :, 0]
     t1 = time.time()
     # print(f)
     print((t1 - t0))
     
     t0 = time.time()
-    for i in range(1000):
-        f = convolve2d(x[0, :, :, 0], conv2d.weights[0, ::-1, ::-1, 0], mode='same') + conv2d.bias[0, ::-1, ::-1, 0]
-    t1 = time.time()
-    # print(f)
-    print((t1 - t0))
-    
-    t0 = time.time()
-    for i in range(1000):
+    for i in range(10):
         f = conv2d.back_prop(x)[0, :, :, 0]
     t1 = time.time()
     # print(f)
@@ -59,16 +54,25 @@ def main():
     dloss_dz = conv2d.ac_func_d(conv2d.z_cache, x)[0, :, :, 0]
     print((t1 - t0))
     
+    print("---scipy")
+    
     t0 = time.time()
-    for i in range(1000):
-        f = convolve2d(conv2d.weights[0, :, :, 0], dloss_dz, mode='full')
+    for i in range(10):
+        f = convolve2d(x[0, :, :, 0], conv2d.weights[0, ::-1, ::-1, 0], mode='same') + conv2d.bias[0, ::-1, ::-1, 0]
+    t1 = time.time()
+    # print(f)
+    print((t1 - t0))
+    
+    t0 = time.time()
+    for i in range(10):
+        f = convolve2d(dloss_dz, conv2d.weights[0, :, :, 0], mode='full')
     t1 = time.time()
     # print(f[1:-1, 1:-1])
     print((t1 - t0))
     
     t0 = time.time()
-    for i in range(1000):
-        f = convolve2d(dloss_dz[::-1, ::-1], x[0, :, :, 0], mode='same')
+    for i in range(10):
+        f = convolve(dloss_dz[::-1, ::-1], x[0, :, :, 0], mode='same')
     t1 = time.time()
     # print(f[1:-1, 1:-1])
     print((t1 - t0))
