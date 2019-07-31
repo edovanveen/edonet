@@ -54,7 +54,7 @@ def main():
                              seed=0)
 
     # Train model with Adam optimizer.
-    model.fit(x_train, y_train, epochs=5, learning_rate=0.001, 
+    model.fit(x_train, y_train, epochs=6, learning_rate=0.001, 
               batch_size=100, optimizer='Adam', verbose=True)
     
     # After training, set dropout rates to 0.

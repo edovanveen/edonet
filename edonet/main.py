@@ -22,6 +22,7 @@ class DropoutLayer:
         self.input_size = input_size
         self.index = index
         self.dropout_rate = dropout_rate
+        self.keep_rate = 1 - dropout_rate
         self.output_size = input_size
         self.i_cache = None
         self.has_weights = False
@@ -45,7 +46,7 @@ class DropoutLayer:
         # Make random dropout mask.
         self.i_cache = cp.random.choice([0, 1], size=(1, self.input_size), 
                                         p=[self.dropout_rate, 1 - self.dropout_rate])
-        return cp.multiply(x, self.i_cache)
+        return cp.multiply(x, self.i_cache) / self.keep_rate
     
     def back_prop(self, dloss_dy):
         """
@@ -62,7 +63,7 @@ class DropoutLayer:
             Derivative of loss with respect to input values.
         """
 
-        return cp.multiply(dloss_dy, self.i_cache)
+        return cp.multiply(dloss_dy, self.i_cache) / self.keep_rate
 
 class Conv2DLayer:
 
