@@ -18,14 +18,6 @@ def make_dataset():
     x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
     return cp.array(x_train, dtype=cp.float32), cp.array(x_test, dtype=cp.float32), \
            cp.array(y_train, dtype=cp.float32), cp.array(y_test, dtype=cp.float32)
-
-
-# Check accuracy.
-def accuracy(y_true, y_pred):
-    labels_true = y_true.argmax(axis=1)
-    labels_pred = y_pred.argmax(axis=1)
-    n_good = np.sum(labels_true - labels_pred == 0)
-    return n_good / len(y_true)
     
     
 # Make grid.
@@ -71,7 +63,7 @@ def main():
     model.fit(x_train, y_train, epochs=10, learning_rate=0.01, batch_size=100, optimizer='Adam')
 
     # Show result on test set.
-    print("accuracy: ", accuracy(y_test, model.predict(x_test)))
+    model.evaluate(x_test, y_test)
     show_data_and_decision(model, cp.asnumpy(x_test), cp.asnumpy(y_test))    
     
 

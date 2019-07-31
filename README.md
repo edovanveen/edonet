@@ -37,10 +37,6 @@ Example files:
 
 ## To do
 
-* Research: can we further speed up the CuPy operations? When using convolutions, 
-  the GPU seems to be using 'copy' for parts of the backprop computation.
-  Maybe write a nice user-defined kernel for calculating dloss_dx?
-  Or use FFT convolution? Or use chainer.functions.convolution_2d?
 * Weight initialization should depend on activation function
   ([link1](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf), [link2](https://arxiv.org/pdf/1502.01852.pdf)) 
   (now we always use relu-optimized weight initialization).
@@ -48,17 +44,14 @@ Example files:
   [gradient checking](http://cs231n.github.io/neural-networks-3/?source=post_page---------------------------#gradcheck)
   (already done for Conv2d layer).
 * Rethink NeuralNet layers argument type, dict currently a bit clunky.
-* Implement NeuralNet.evaluate().
 * Implement BatchNormLayer.
 * Add NeuralNet.save() and NeuralNet.load() functionalities for saving weights and structure.
-* Add NeuralNet.describe() functionality that shows all layers and sizes.
-* Automatically set dropout_rate to 0 in DropoutLayers when calling NeuralNet.predict().
-* Add more activation and loss functions, as well as optimizers.
 
 ## Issues
 
 * MaxPool2DLayer: creation of the cached mask goes wrong when multiple elements are equal to max.
 * Softmax derivative is slow.
+* Conv2D dloss_dx is slow. Write user-defined kernel for this?
 
 ## Authors
 * **Edo van Veen** - *Initial work* - [edovanveen](https://github.com/edovanveen)
