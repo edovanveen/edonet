@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.signal import convolve, convolve2d
 import edonet.functions
 
 
@@ -22,6 +23,7 @@ class DropoutLayer:
         self.input_size = input_size
         self.index = index
         self.dropout_rate = dropout_rate
+        self.keep_rate = 1 - dropout_rate
         self.output_size = input_size
         self.i_cache = None
         self.has_weights = False
@@ -45,7 +47,7 @@ class DropoutLayer:
         # Make random dropout mask.
         self.i_cache = np.random.choice([0, 1], size=(1, self.input_size), 
                                         p=[self.dropout_rate, 1 - self.dropout_rate])
-        return np.multiply(x, self.i_cache)
+        return np.multiply(x, self.i_cache) / self.keep_rate
     
     def back_prop(self, dloss_dy):
         """
@@ -62,7 +64,7 @@ class DropoutLayer:
             Derivative of loss with respect to input values.
         """
 
-        return np.multiply(dloss_dy, self.i_cache)
+        return np.multiply(dloss_dy, self.i_cache) / self.keep_rate
 
 class Conv2DLayer:
 
@@ -108,10 +110,10 @@ class Conv2DLayer:
         # Take care of padding.
         if padding == 'same':
             self.padding = ((0, 0),
-                            (int((filter_size[0] - 1) // 2),
-                             int(-(-(filter_size[0] - 1) // 2))),
-                            (int((filter_size[1] - 1) // 2),
-                             int(-(-(filter_size[1] - 1) // 2))),
+                            (int(-(-(filter_size[0] - 1) // 2)),
+                             int((filter_size[0] - 1) // 2)),
+                            (int(-(-(filter_size[1] - 1) // 2)),
+                             int((filter_size[1] - 1) // 2)),
                             (0, 0))
         elif padding == 'valid':
             self.padding = ((0, 0), (0, 0), (0, 0), (0, 0))
@@ -210,14 +212,32 @@ class Conv2DLayer:
         dloss_dz = self.ac_func_d(self.z_cache, dloss_dy)
         self.dloss_dw = (1/nr_examples) * np.tensordot(self.x_cache, dloss_dz, 
                                                        axes=((0, 3, 5), (0, 1, 2)))
+        self.dloss_db = np.average(self.dloss_dw, axis=(0, 1, 2))
+        
+        import time
+        
+        # This is too slow.
+        t0 = time.time()
         d_y_times_filters = np.tensordot(self.d_y, self.weights, axes=((1,), (2,)))
         dz_dx = np.tensordot(self.d_x, d_y_times_filters, axes=((1,), (3,)))
         dloss_dx = np.tensordot(dloss_dz, dz_dx, axes=((1, 2, 3), (1, 3, 5)))
+        print(time.time() - t0)
+        
+        # This is also too slow.
+        t0 = time.time()
+        dloss_dx = np.zeros((nr_examples,) + self.padded_size)
+        for n in range(nr_examples):
+            for c in range(self.output_size[2]):
+                for k in range(self.input_size[2]):        
+                    dloss_dx[n, :, :, k] = dloss_dx[n, :, :, k] + \
+                        convolve2d(dloss_dz[n, :, :, c], self.weights[k, :, :, c], mode='full')
+        print(time.time() - t0)
+        
+        # Correct for padding.
         dloss_dx = dloss_dx[:, self.padding[1][0]:self.padded_size[0] - self.padding[1][1],
                             self.padding[2][0]:self.padded_size[1] - self.padding[2][1], :]
-        self.dloss_db = np.average(self.dloss_dw, axis=(0, 1, 2))
         
-        # Return derivative of loss with respect to inputs x
+        # Return derivative of loss with respect to inputs x.
         return dloss_dx
         
     def update_weights(self, learning_rate):
@@ -422,8 +442,7 @@ class DenseLayer:
         stdev = np.sqrt(2) / np.sqrt(self.output_size)
         # stdev = np.sqrt(2) / np.sqrt(self.nr_inputs * self.output_size)
         self.weights = np.array(np.random.normal(loc=0., scale=stdev, 
-                                                 size=(self.nr_inputs, self.output_size),
-                                                 dtype=np.float32), 
+                                                 size=(self.nr_inputs, self.output_size)),
                                 dtype=np.float32)
         self.bias = np.zeros((1, self.output_size), dtype=np.float32)
 

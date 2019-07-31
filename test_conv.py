@@ -27,11 +27,12 @@ def accuracy(y_true, y_pred):
 # Make and test model.
 def main():
 
+    """
     np.random.seed(1)
-    x = np.random.rand(1, 128, 128, 1)
+    x = np.random.rand(1, 64, 64, 3)
     
-    conv2d = edonet.Conv2DLayer(input_size=(128, 128, 1), index=0, nr_filters=1, 
-                                filter_size=(3, 3), activation='relu', stride=(1, 1), padding='same')
+    conv2d = edonet.Conv2DLayer(input_size=(64, 64, 3), index=0, nr_filters=2, 
+                                filter_size=(4, 3), activation='relu', stride=(1, 1), padding='same')
     
     import time
     from scipy.signal import convolve, convolve2d
@@ -39,45 +40,58 @@ def main():
     print("---tensordot")
     
     t0 = time.time()
-    for i in range(10):
-        f = conv2d.forward_prop(x)[0, :, :, 0]
+    for i in range(1):
+        f = conv2d.forward_prop(x)[0, :, :, :]
     t1 = time.time()
     # print(f)
     print((t1 - t0))
     
     t0 = time.time()
-    for i in range(10):
-        f = conv2d.back_prop(x)[0, :, :, 0]
+    for i in range(1):
+        f = conv2d.back_prop(x[:, :, :, 0:2])[0, :, :, :]
     t1 = time.time()
-    # print(f)
-    # print(conv2d.dloss_dw[0, :, :, 0])
-    dloss_dz = conv2d.ac_func_d(conv2d.z_cache, x)[0, :, :, 0]
+    print(f[:, :, 0])
+    print(conv2d.dloss_dw[0, :, :, :])
+    dloss_dz = conv2d.ac_func_d(conv2d.z_cache, x[:, :, :, 0:2])[0, :, :, :]
     print((t1 - t0))
     
     print("---scipy")
     
+    f = np.zeros(conv2d.output_size)
     t0 = time.time()
-    for i in range(10):
-        f = convolve2d(x[0, :, :, 0], conv2d.weights[0, ::-1, ::-1, 0], mode='same') + conv2d.bias[0, ::-1, ::-1, 0]
+    for i in range(1):
+        for c_out in range(2):
+            for c_in in range(3):
+                f[:, :, c_out] = f[:, :, c_out] + convolve2d(x[0, :, :, c_in], \
+                    conv2d.weights[c_in, ::-1, ::-1, c_out], mode='same')
+        f = f + conv2d.bias
     t1 = time.time()
     # print(f)
     print((t1 - t0))
     
+    f = np.zeros((67, 66, 3))
     t0 = time.time()
-    for i in range(10):
-        f = convolve2d(dloss_dz, conv2d.weights[0, :, :, 0], mode='full')
+    for i in range(1):
+        for c_out in range(2):
+            for c_in in range(3):        
+                f[:, :, c_in] = f[:, :, c_in] + \
+                    convolve2d(dloss_dz[:, :, c_out], conv2d.weights[c_in, :, :, c_out], mode='full')
     t1 = time.time()
-    # print(f[1:-1, 1:-1])
+    print(f[2:-1, 1:-1, 0])
     print((t1 - t0))
     
+    f = np.zeros((3, 64, 64, 2))
     t0 = time.time()
-    for i in range(10):
-        f = convolve(dloss_dz[::-1, ::-1], x[0, :, :, 0], mode='same')
+    for i in range(1):
+        for c_out in range(2):
+            for c_in in range(3):
+                f[c_in, :, :, c_out] = f[c_in, :, :, c_out] + \
+                    convolve(dloss_dz[::-1, ::-1, c_out], x[0, :, :, c_in], mode='same')
     t1 = time.time()
-    # print(f[1:-1, 1:-1])
+    print(f[0, 30:-30, 31:-30, :])
     print((t1 - t0))
-    
     """
+    
     # Make dataset.
     x_train, x_test, y_train, y_test = make_dataset()
     
@@ -112,7 +126,6 @@ def main():
     y_pred = model.batch_predict(x_test, batch_size=200)
     print(y_pred.argmax(axis=1))
     print("accuracy: ", accuracy(y_test, y_pred))
-    """
 
 
 if __name__ == "__main__":
