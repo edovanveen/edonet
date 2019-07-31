@@ -20,19 +20,23 @@ model = edonet.NeuralNet(input_size=(32, 32, 3),
                                  {'type': 'MaxPool2D', 'pool_size': (2, 2)},
                                  {'type': 'Flatten'},
                                  {'type': 'Dense', 'nr_nodes': 16, 'activation': 'relu'},
+                                 {'type': 'Dropout', 'dropout_rate': 0.1},
+                                 {'type': 'Dense', 'nr_nodes': 8, 'activation': 'relu'},
                                  {'type': 'Dense', 'nr_nodes': 2, 'activation': 'softmax'}),
                          loss='CEL',
                          seed=0)
-                         
+# Describe model layout.
+model.describe()
+
 # Fit the model to the training data, using 5 iterations.
 model.fit(x_train, y_train, epochs=5, optimizer='Adam')
 
-# Do a prediction using the test set.
-y_pred = model.predict(x_test)
+# Evaluate using the test set.
+model.evaluate(x_test, y_test)
 ```
 
 Example files:
-* To run an example of a densely connected neural network, use `test_dense.py`. For dataset generation and visualisation in `test_dense.py` you will need numpy, matplotlib and sklearn.
+* To run an example of a densely connected neural network, use `test_dense.py`. For dataset generation and visualisation you will need numpy, matplotlib and sklearn.
 * To run an example of a convolutional neural network, use `test_conv.py`. For dataset generation you will need numpy and tensorflow.
 
 ## To do
