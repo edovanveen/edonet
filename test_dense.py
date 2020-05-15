@@ -16,10 +16,13 @@ def make_dataset():
     encoder = [[1, 0], [0, 1]]
     y = np.array([encoder[i] for i in y])
     x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0)
-    return cp.array(x_train, dtype=cp.float32), cp.array(x_test, dtype=cp.float32), \
-           cp.array(y_train, dtype=cp.float32), cp.array(y_test, dtype=cp.float32)
+    x_train = cp.array(x_train, dtype=cp.float32)
+    x_test = cp.array(x_test, dtype=cp.float32)
+    y_train = cp.array(y_train, dtype=cp.float32)
+    y_test = cp.array(y_test, dtype=cp.float32)
+    return x_train, x_test, y_train, y_test
     
-    
+
 # Make grid.
 def make_meshgrid(x, y, h=.02):
     x_min, x_max = x.min() - 1, x.max() + 1

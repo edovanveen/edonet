@@ -7,7 +7,7 @@ import edonet
 # Get mnist handwritten numbers dataset.
 def make_dataset():
     mnist = tf.keras.datasets.mnist
-    (x_train, y_train),(x_test, y_test) = mnist.load_data()
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train, x_test = x_train / 255.0, x_test / 255.0
     x_train = x_train.reshape((60000, 28, 28, 1))
     x_test = x_test.reshape((10000, 28, 28, 1))
@@ -45,7 +45,7 @@ def main():
               batch_size=100, optimizer='Adam', verbose=True)
     
     # Show result on test set.
-    y_pred = model.evaluate(x_test, y_test)
+    model.evaluate(x_test, y_test)
 
 
 if __name__ == "__main__":
