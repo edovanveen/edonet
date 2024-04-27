@@ -135,6 +135,7 @@ class NeuralNet:
         y_pred = self.predict(x, batch_size)
         acc = edonet.metrics.accuracy(y, y_pred)
         print("Evaluation accuracy: ", acc)
+        return acc
         
     def grad_desc(self, y_pred, y_true, learning_rate):
         """
