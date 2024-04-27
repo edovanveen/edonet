@@ -1,8 +1,26 @@
 import cupy as cp
+from abc import ABC, abstractmethod
 import edonet.functions
 
 
-class DropoutLayer:
+class Layer(ABC):
+
+    @abstractmethod
+    def __init__(self, input_size, index):
+        self.input_size = input_size
+        self.index = index
+        self.output_size = input_size
+        self.has_weights = False
+        self.layer_type = 'AbstractLayer'
+
+    def forward_prop(self, x):
+        pass
+
+    def back_prop(self, dloss_dy):
+        pass
+
+
+class DropoutLayer(Layer):
 
     def __init__(self, input_size, index, dropout_rate):
         """
@@ -18,15 +36,15 @@ class DropoutLayer:
             Dropout rate.
         """
     
-        # Set attributes.
         self.input_size = input_size
         self.index = index
-        self.dropout_rate = dropout_rate
-        self.keep_rate = 1 - dropout_rate
         self.output_size = input_size
-        self.i_cache = None
         self.has_weights = False
         self.layer_type = 'Dropout'
+
+        self._dropout_rate = dropout_rate
+        self._keep_rate = 1 - dropout_rate
+        self._i_cache = None
         
     def forward_prop(self, x):
         """
@@ -44,9 +62,9 @@ class DropoutLayer:
         """
     
         # Make random dropout mask.
-        self.i_cache = cp.random.choice([0, 1], size=(1, self.input_size), 
-                                        p=[self.dropout_rate, 1 - self.dropout_rate])
-        return cp.multiply(x, self.i_cache) / self.keep_rate
+        self._i_cache = cp.random.choice([0, 1], size=(1, self.input_size), 
+                                         p=[self._dropout_rate, 1 - self._dropout_rate])
+        return cp.multiply(x, self._i_cache) / self._keep_rate
     
     def back_prop(self, dloss_dy):
         """
@@ -63,9 +81,10 @@ class DropoutLayer:
             Derivative of loss with respect to input values.
         """
 
-        return cp.multiply(dloss_dy, self.i_cache) / self.keep_rate
+        return cp.multiply(dloss_dy, self._i_cache) / self._keep_rate
 
-class Conv2DLayer:
+
+class Conv2DLayer(Layer):
 
     def __init__(self, input_size, index, nr_filters, filter_size, activation, stride=(1, 1), padding='valid'):
         """
@@ -219,21 +238,9 @@ class Conv2DLayer:
         
         # Return derivative of loss with respect to inputs x
         return dloss_dx
-        
-    def update_weights(self, learning_rate):
-        """
-        Update weights using gradients.
-        
-        Parameters
-        ----------
-        learning_rate : float
-            Learning rate.
-        """
-        self.weights = self.weights - learning_rate * self.dloss_dw
-        self.bias = self.bias - learning_rate * self.dloss_db
     
     
-class MaxPool2DLayer:
+class MaxPool2DLayer(Layer):
 
     def __init__(self, input_size, index, pool_size=(2, 2)):
         """
@@ -324,7 +331,7 @@ class MaxPool2DLayer:
         return cp.multiply(dloss_dy_expanded, self.i_cache)
         
     
-class FlattenLayer:
+class FlattenLayer(Layer):
 
     def __init__(self, input_size, index):
         """
@@ -382,7 +389,7 @@ class FlattenLayer:
         return cp.reshape(dloss_dy, newshape=(dloss_dy.shape[0],) + self.input_size)
     
     
-class DenseLayer:
+class DenseLayer(Layer):
 
     def __init__(self, nr_inputs, index, nr_nodes, activation):
         """
@@ -474,15 +481,3 @@ class DenseLayer:
         
         # Return derivative of loss with respect to inputs x
         return dloss_dx
-        
-    def update_weights(self, learning_rate):
-        """
-        Update weights using gradients.
-        
-        Parameters
-        ----------
-        learning_rate : float
-            Learning rate.
-        """
-        self.weights = self.weights - learning_rate * self.dloss_dw
-        self.bias = self.bias - learning_rate * self.dloss_db

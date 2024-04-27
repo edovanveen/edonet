@@ -1,8 +1,37 @@
 import cupy as cp
-import warnings
+from abc import ABC, abstractmethod
 
 
-class NoOptimizer:
+class Optimizer(ABC):
+
+    @abstractmethod
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def update(self, layer, learning_rate):
+        pass
+        
+    def set_weights(self, layer, learning_rate, dw, db):
+        """
+        Set weights of input layer
+        
+        Parameters
+        ----------
+        layer : layer object
+            Layer within neural network.
+        learning_rate : float
+            Learning rate.
+        dw : cp.array of floats
+            Changes in weight.
+        db : cp.array of floats
+            Changes in bias.
+        """
+        layer.weights = layer.weights - learning_rate * dw
+        layer.bias = layer.bias - learning_rate * db
+
+
+class NoOptimizer(Optimizer):
 
     def __init__(self):
         """
@@ -21,11 +50,12 @@ class NoOptimizer:
         learning_rate : float
             Learning rate.
         """
-        layer.update_weights(learning_rate)
+        self.set_weights(layer, learning_rate,
+                         self.dloss_dw, self.dloss_db)
 
 
 # See https://arxiv.org/pdf/1412.6980.pdf
-class AdamOptimizer:
+class AdamOptimizer(Optimizer):
 
     def __init__(self, model, beta1=0.9, beta2=0.999, epsilon=1e-8):
         """
@@ -93,8 +123,9 @@ class AdamOptimizer:
                     self.epsilon
                     
         # Set layer weights.
-        layer.weights = layer.weights - learning_rate * cp.divide(update1_w, update2_w)
-        layer.bias = layer.bias - learning_rate * cp.divide(update1_b, update2_b)
+        self.set_weights(layer, learning_rate,
+                         cp.divide(update1_w, update2_w),
+                         cp.divide(update1_b, update2_b))
         
 
 def choose(model, optimizer):
@@ -114,13 +145,11 @@ def choose(model, optimizer):
         Optimizer object with update() method for updating weights.
     """
         
-    if optimizer == None:
+    if optimizer is None:
         opt = NoOptimizer()
     elif optimizer == 'Adam':
         opt = AdamOptimizer(model)
     else:
-        warnings.warn("Warning: optimizer '" + str(optimizer) +
-                      "' not recognized.")
-        opt = NoOptimizer
+        raise RuntimeError("Optimizer '{optimizer}' not recognized.")
             
     return opt

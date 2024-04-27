@@ -5,7 +5,6 @@ import pickle
 import edonet
 
 
-# Get mnist handwritten numbers dataset.
 def load_mnist_file():
     f = gzip.open('tests/data/mnist.pkl.gz', 'rb')
     data = pickle.load(f, encoding='bytes')
@@ -13,6 +12,7 @@ def load_mnist_file():
     return data
 
 
+# Get mnist handwritten numbers dataset.
 def make_mnist_dataset():
     (x_train, y_train), (x_test, y_test) = load_mnist_file()
     x_train, x_test = x_train / 255.0, x_test / 255.0
