@@ -1,4 +1,8 @@
-import cupy as cp
+try:
+    import cupy as cp
+except ImportError:
+    import numpy as cp
+
 from abc import ABC, abstractmethod
 
 

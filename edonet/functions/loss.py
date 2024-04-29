@@ -1,4 +1,7 @@
-import cupy as cp
+try:
+    import cupy as cp
+except ImportError:
+    import numpy as cp
 
 
 def cel(y_pred, y_true):

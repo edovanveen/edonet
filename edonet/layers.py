@@ -1,4 +1,8 @@
-import cupy as cp
+try:
+    import cupy as cp
+except ImportError:
+    import numpy as cp
+
 from abc import ABC, abstractmethod
 import edonet.functions
 
@@ -45,7 +49,7 @@ class DropoutLayer(Layer):
         self._dropout_rate = dropout_rate
         self._keep_rate = 1 - dropout_rate
         self._i_cache = None
-        
+
     def forward_prop(self, x):
         """
         Do forward propagation through the layer, saving a dropout mask to cache.
@@ -62,8 +66,10 @@ class DropoutLayer(Layer):
         """
     
         # Make random dropout mask.
-        self._i_cache = cp.random.choice([0, 1], size=(1, self.input_size), 
-                                         p=[self._dropout_rate, 1 - self._dropout_rate])
+        self._i_cache = cp.random.choice(
+            [0, 1],
+            size=(1, self.input_size),
+            p=[self._dropout_rate, 1 - self._dropout_rate])
         return cp.multiply(x, self._i_cache) / self._keep_rate
     
     def back_prop(self, dloss_dy):
@@ -229,12 +235,16 @@ class Conv2DLayer(Layer):
         dloss_dz = self.ac_func_d(self.z_cache, dloss_dy)
         self.dloss_dw = (1/nr_examples) * cp.tensordot(self.x_cache, dloss_dz, 
                                                        axes=((0, 3, 5), (0, 1, 2)))
+        self.dloss_db = cp.average(self.dloss_dw, axis=(0, 1, 2))
+
         d_y_times_filters = cp.tensordot(self.d_y, self.weights, axes=((1,), (2,)))
         dz_dx = cp.tensordot(self.d_x, d_y_times_filters, axes=((1,), (3,)))
+
+        # TODO: this line is very very slow
         dloss_dx = cp.tensordot(dloss_dz, dz_dx, axes=((1, 2, 3), (1, 3, 5)))
+
         dloss_dx = dloss_dx[:, self.padding[1][0]:self.padded_size[0] - self.padding[1][1],
                             self.padding[2][0]:self.padded_size[1] - self.padding[2][1], :]
-        self.dloss_db = cp.average(self.dloss_dw, axis=(0, 1, 2))
         
         # Return derivative of loss with respect to inputs x
         return dloss_dx
