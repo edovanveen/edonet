@@ -19,4 +19,4 @@ jobs:
           poetry install --only dev
       - name: Run tests
         run: |
-          pytest
+          poetry run pytest
