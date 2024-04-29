@@ -59,7 +59,7 @@ class NeuralNet:
         Describe NeuralNet layout.
         """
         for layer in self.layers:
-            print(layer.index, layer.layer_type)
+            print(layer.index, type(layer))
             print("-- input size: ", layer.input_size)
             print("-- output size: ", layer.output_size)
             
@@ -80,10 +80,12 @@ class NeuralNet:
             Classification probabilities.
         """
         
+        ignored_layers = [edonet.layers.DropoutLayer]
+
         # Push x through each layer using forward propagation.
         y = self.layers[0].forward_prop(x)
         for layer in self.layers[1:]:
-            if not remove_dropout or layer.layer_type != 'Dropout':
+            if (not remove_dropout) or (type(layer) not in ignored_layers):
                 y = layer.forward_prop(y)
         return y
 

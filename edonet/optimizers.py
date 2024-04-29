@@ -1,9 +1,9 @@
+from abc import ABC, abstractmethod
+
 try:
     import cupy as cp
 except ImportError:
     import numpy as cp
-
-from abc import ABC, abstractmethod
 
 
 class Optimizer(ABC):

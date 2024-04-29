@@ -5,6 +5,7 @@ except ImportError:
     CUPY = False
     import numpy as cp
 import numpy as np
+
 import edonet
 
 

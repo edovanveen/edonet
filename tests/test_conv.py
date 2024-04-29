@@ -1,10 +1,12 @@
+import gzip
+import pickle
+
 try:
     import cupy as cp
 except ImportError:
     import numpy as cp
 import numpy as np
-import gzip
-import pickle
+
 import edonet
 
 
