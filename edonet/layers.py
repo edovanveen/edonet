@@ -180,7 +180,8 @@ class Conv2DLayer(Layer):
         stdev = cp.sqrt(2) / cp.sqrt(a * b * c * d)
         
         # Initialize weights.
-        self.weights = cp.random.normal(loc=0., scale=stdev, size=(a, b, c, d), dtype=cp.float32)
+        self.weights = cp.random.normal(loc=0., scale=stdev, size=(a, b, c, d))
+        self.weights = cp.array(self.weights, dtype=cp.float32)
         self.bias = cp.zeros((1, 1, 1, d), dtype=cp.float32)
 
     def forward_prop(self, x):
@@ -439,8 +440,8 @@ class DenseLayer(Layer):
         stdev = cp.sqrt(2) / cp.sqrt(self.output_size)
         # stdev = cp.sqrt(2) / cp.sqrt(self.input_size * self.output_size)
         self.weights = cp.random.normal(loc=0., scale=stdev, 
-                                        size=(self.input_size, self.output_size),
-                                        dtype=cp.float32)
+                                        size=(self.input_size, self.output_size))
+        self.weights = cp.array(self.weights, dtype=cp.float32)
         self.bias = cp.zeros((1, self.output_size), dtype=cp.float32)
 
     def forward_prop(self, x):

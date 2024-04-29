@@ -112,7 +112,7 @@ class NeuralNet:
         
         # Push x through each layer using forward propagation.
         y = cp.zeros((nr_examples, self.layers[-1].output_size), dtype=cp.float32)
-        for layer in self.layers:
+        for _ in self.layers:
             # Iterate over batches.
             for i in range(nr_batches):
                 i_start = i*batch_size
