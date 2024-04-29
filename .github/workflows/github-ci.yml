@@ -1,0 +1,22 @@
+name: NAClib Actions
+run-name: ${{ github.actor }} is running sphinx-build and pytest on GitHub Actions 🚀
+on: [push]
+permissions:
+  contents: write
+jobs:
+  Run-Tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry install --only main dev
+      - name: Run tests
+        run: |
+          pytest
