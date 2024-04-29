@@ -1,5 +1,8 @@
+try:
+    import cupy as cp
+except ImportError:
+    import numpy as cp
 import numpy as np
-import cupy as cp
 import edonet
 
 

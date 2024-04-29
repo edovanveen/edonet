@@ -1,5 +1,8 @@
+try:
+    import cupy as cp
+except ImportError:
+    import numpy as cp
 import numpy as np
-import cupy as cp
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_moons
 from sklearn.model_selection import train_test_split
