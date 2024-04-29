@@ -1,6 +1,8 @@
 try:
+    CUPY = True
     import cupy as cp
 except ImportError:
+    CUPY = False
     import numpy as cp
 import numpy as np
 import matplotlib.pyplot as plt
@@ -37,7 +39,9 @@ def make_meshgrid(x, y, h=.02):
 # Plot decision boundary.
 def plot_contours(ax, model, xx, yy, **params):
     z = model.predict(cp.c_[xx.ravel(), yy.ravel()]).argmax(axis=1)
-    z = cp.asnumpy(z).reshape(xx.shape)
+    if CUPY:
+        z = cp.asnumpy(z)
+    z = z.reshape(xx.shape)
     out = ax.contourf(xx, yy, z, **params)
     return out
     
@@ -71,4 +75,3 @@ def test_moons_dataset():
     # Show result on test set.
     accuracy = model.evaluate(x_test, y_test)
     assert(accuracy > 0.95)
-    # show_data_and_decision(model, cp.asnumpy(x_test), cp.asnumpy(y_test))

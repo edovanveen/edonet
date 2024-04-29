@@ -1,6 +1,8 @@
 try:
+    CUPY = True
     import cupy as cp
 except ImportError:
+    CUPY = False
     import numpy as cp
 import numpy as np
 import edonet
@@ -48,7 +50,9 @@ def test_gradient_values():
                 y_check1 = model.predict(x_check1)
                 dloss_dx_check[0, i, j, k] = (model.loss(y_check1, y)[0] - 
                                               model.loss(y_check0, y)[0]) / (2 * epsilon)
-    difference = np.max(cp.asnumpy(dloss_dx) - dloss_dx_check)
+    if CUPY:
+        dloss_dx = cp.asnumpy(dloss_dx)
+    difference = np.max(dloss_dx - dloss_dx_check)
     assert(difference < 1e-4)
     
     # Check derivatives of loss wrt weights of conv2d layer.
@@ -66,5 +70,7 @@ def test_gradient_values():
                     y_check1 = model.predict(x)
                     dloss_dw_check[h, i, j, k] = (model.loss(y_check1, y)[0] - 
                                                   model.loss(y_check0, y)[0]) / (2 * epsilon)
-    difference = np.max(cp.asnumpy(dloss_dw) - dloss_dw_check)
+    if CUPY:
+        dloss_dw = cp.asnumpy(dloss_dw)
+    difference = np.max(dloss_dw - dloss_dw_check)
     assert(difference < 1e-4)
