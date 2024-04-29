@@ -1,10 +1,12 @@
 try:
     import cupy as cp
+    import cupy.typing as cpt
 except ImportError:
     import numpy as cp
+    import numpy.typing as cpt
 
 
-def accuracy(y_pred, y_true):
+def accuracy(y_pred: cpt.NDArray, y_true: cpt.NDArray) -> float:
     """
     Calculate accuracy of one-hot encoded output.
     
