@@ -1,4 +1,4 @@
-from edonet.main import *
+from edonet.main import NeuralNet
 import edonet.layers
 import edonet.metrics
 import edonet.optimizers

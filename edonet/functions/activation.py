@@ -1,5 +1,7 @@
-import cupy as cp
-import warnings
+try:
+    import cupy as cp
+except ImportError:
+    import numpy as cp
 
 
 def relu(z):
@@ -197,9 +199,6 @@ def choose(activation):
         ac_func = softmax
         ac_func_d = softmax_d
     else:
-        warnings.warn("Warning: activation function '" + str(activation) +
-                      "' not recognized, using relu activation function.")
-        ac_func = relu
-        ac_func_d = relu_d
+        raise RuntimeError("Activation function '{activation}' not recognized.")
             
     return ac_func, ac_func_d

@@ -1,4 +1,8 @@
-import cupy as cp
+try:
+    import cupy as cp
+except ImportError:
+    import numpy as cp
+
 import edonet.functions
 
 
@@ -55,7 +59,7 @@ class NeuralNet:
         Describe NeuralNet layout.
         """
         for layer in self.layers:
-            print(layer.index, layer.layer_type)
+            print(layer.index, type(layer))
             print("-- input size: ", layer.input_size)
             print("-- output size: ", layer.output_size)
             
@@ -76,10 +80,12 @@ class NeuralNet:
             Classification probabilities.
         """
         
+        ignored_layers = [edonet.layers.DropoutLayer]
+
         # Push x through each layer using forward propagation.
         y = self.layers[0].forward_prop(x)
         for layer in self.layers[1:]:
-            if not remove_dropout or layer.layer_type != 'Dropout':
+            if (not remove_dropout) or (type(layer) not in ignored_layers):
                 y = layer.forward_prop(y)
         return y
 
@@ -108,7 +114,7 @@ class NeuralNet:
         
         # Push x through each layer using forward propagation.
         y = cp.zeros((nr_examples, self.layers[-1].output_size), dtype=cp.float32)
-        for layer in self.layers:
+        for _ in self.layers:
             # Iterate over batches.
             for i in range(nr_batches):
                 i_start = i*batch_size
@@ -135,6 +141,7 @@ class NeuralNet:
         y_pred = self.predict(x, batch_size)
         acc = edonet.metrics.accuracy(y, y_pred)
         print("Evaluation accuracy: ", acc)
+        return acc
         
     def grad_desc(self, y_pred, y_true, learning_rate):
         """

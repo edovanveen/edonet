@@ -1,5 +1,7 @@
-import cupy as cp
-import warnings
+try:
+    import cupy as cp
+except ImportError:
+    import numpy as cp
 
 
 def cel(y_pred, y_true):
@@ -64,9 +66,6 @@ def choose(loss):
         loss_func = cel
         loss_func_d = cel_d
     else:
-        warnings.warn("Warning: loss function '" + str(loss) +
-                      "' not recognized, using cross-entropy loss.")
-        loss_func = cel
-        loss_func_d = cel_d
+        raise RuntimeError("Loss function '{loss}' not recognized.")
             
     return loss_func, loss_func_d
