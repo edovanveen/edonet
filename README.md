@@ -33,8 +33,8 @@ model.evaluate(x_test, y_test)
 ```
 
 Example files:
-* To run an example of a densely connected neural network, use `test_dense.py`. For dataset generation and visualisation you will need numpy, matplotlib and sklearn.
-* To run an example of a convolutional neural network, use `test_conv.py`. For dataset generation you will need numpy and tensorflow.
+* For an example of a densely connected neural network, see `test_dense.py`. For dataset generation and visualisation you will need sklearn and matplotlib, respectively.
+* For an example of a convolutional neural network, see `test_conv.py`.
 
 ## To do
 
