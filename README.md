@@ -1,8 +1,5 @@
 # edonet
-A minimal neural network, written in Python 3 using only the CuPy library for speedy tensor operations accelerated by CUDA.
-
-## Requirements
-* CuPy
+A minimal neural network, written in Python 3 using numpy and (optinally) cupy for speedy tensor operations accelerated by CUDA.
 
 ## Usage
 
@@ -50,10 +47,7 @@ Example files:
 * Rethink NeuralNet layers argument type, dict currently a bit clunky.
 * Implement BatchNormLayer.
 * Add NeuralNet.save() and NeuralNet.load() functionalities for saving weights and structure.
-
-## Issues
-
-* MaxPool2DLayer: creation of the cached mask goes wrong when multiple elements are equal to max.
+* MaxPool2DLayer: can creation of the cached mask go wrong when multiple elements are equal to max?
 * Softmax derivative is slow.
 * Conv2D dloss_dx is slow. Write user-defined kernel for this?
 
