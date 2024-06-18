@@ -16,7 +16,7 @@ ruff = "^0.4.1"
 pytest = "^8.1.1"
 mypy = "^1.10.0"
 matplotlib = "^3.8.4"
-scikit-learn = "^1.4.2"
+scikit-learn = "^1.5.0"
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
